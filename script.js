@@ -53,36 +53,94 @@ function resetResults(){
 
 function analyzeChartImage(img){
  try{
-  const width=img.naturalWidth||img.width,height=img.naturalHeight||img.height;if(!width||!height)return{available:false,signals:['Image dimensions could not be read.']};
-  const scale=Math.min(1,1000/width),w=Math.max(1,Math.round(width*scale)),h=Math.max(1,Math.round(height*scale));
-  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,w,h);const p=ctx.getImageData(0,0,w,h).data;
-  let red=0,green=0,dark=0,bright=0;const row=new Array(h).fill(0),col=new Array(w).fill(0);
-  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4,r=p[i],g=p[i+1],b=p[i+2],mx=Math.max(r,g,b);if(mx>215)bright++;if(mx<65)dark++;const R=r>115&&r>g*1.22&&r>b*1.12,G=g>95&&g>r*1.16&&g>b*1.03;if(R||G){col[x]++;row[y]++;if(R)red++;if(G)green++;}}
-  const colored=red+green;const visualBias=colored<30?'NEUTRAL':green>red*1.1?'BULLISH':red>green*1.1?'BEARISH':'NEUTRAL';
-  const density=Math.min(100,Math.round(colored/(w*h)*10000));const background=dark>bright?'DARK':'LIGHT';
-  const bins=5,points=[];for(let b=0;b<bins;b++){let s=Math.floor(b*w/bins),e=Math.floor((b+1)*w/bins),ys=0,n=0;for(let x=s;x<e;x++)if(col[x]){let total=0,weighted=0;for(let y=0;y<h;y++){total+=row[y];weighted+=y*row[y];}if(total){ys+=weighted/total;n++;}}points.push(n?ys/n:null);}
-  const valid=points.filter(Number.isFinite);let structure='RANGE / UNCLEAR',slope=0;if(valid.length>=2){slope=valid[0]-valid[valid.length-1];const threshold=h*.035;if(slope>threshold)structure='BULLISH';else if(slope<-threshold)structure='BEARISH';}
-  const rowThreshold=Math.max(3,Math.round(w*.006)),zones=[];for(let y=0;y<h;y++)if(row[y]>=rowThreshold)zones.push(y);const clusters=[];for(const y of zones){const last=clusters[clusters.length-1];if(!last||y-last[last.length-1]>Math.max(4,h*.012))clusters.push([y]);else last.push(y);}const centers=clusters.filter(c=>c.length>=2).map(c=>Math.round(c.reduce((a,b)=>a+b,0)/c.length));
-  const upper=centers.filter(y=>y<h*.45).slice(0,3),lower=centers.filter(y=>y>h*.55).slice(-3);
-  const confidence=Math.min(92,Math.max(40,(visualBias==='NEUTRAL'?48:58)+Math.min(20,Math.round(Math.abs(green-red)/Math.max(1,colored)*20))+Math.min(18,Math.round(Math.abs(slope)/Math.max(1,h)*120))));
-  return{available:true,width,height,visualBias,structure,confidence,background,density,green,red,upper,lower,signals:[`${visualBias==='NEUTRAL'?'No strong':visualBias==='BULLISH'?'Bullish':'Bearish'} candle-color bias detected.`,`Visual structure: ${structure}.`,`Chart activity density: ${density}%.`,`Detected ${green.toLocaleString()} bullish-color pixels vs ${red.toLocaleString()} bearish-color pixels.`,`Detected ${centers.length} high-activity horizontal zones.`]};
+  const width=img.naturalWidth||img.width,height=img.naturalHeight||img.height;
+  if(!width||!height)return{available:false,signals:['Image dimensions could not be read.']};
+  const scale=Math.min(1,1200/width),w=Math.max(1,Math.round(width*scale)),h=Math.max(1,Math.round(height*scale));
+  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,w,h);
+  const p=ctx.getImageData(0,0,w,h).data;
+  let red=0,green=0,dark=0,bright=0,colored=0;
+  const row=new Array(h).fill(0),col=new Array(w).fill(0),bullRow=new Array(h).fill(0),bearRow=new Array(h).fill(0);
+  for(let y=0;y<h;y++){
+   for(let x=0;x<w;x++){
+    const i=(y*w+x)*4,r=p[i],g=p[i+1],b=p[i+2],mx=Math.max(r,g,b);
+    if(mx>215)bright++; if(mx<65)dark++;
+    const R=r>115&&r>g*1.22&&r>b*1.12;
+    const G=g>95&&g>r*1.16&&g>b*1.03;
+    if(R||G){colored++;col[x]++;row[y]++;if(R){red++;bearRow[y]++;}if(G){green++;bullRow[y]++;}}
+   }
+  }
+
+  const visualBias=colored<30?'NEUTRAL':green>red*1.1?'BULLISH':red>green*1.1?'BEARISH':'NEUTRAL';
+  // Correct percentage calculation: colored pixels / all pixels * 100.
+  const density=Math.min(100,Math.round((colored/(w*h))*100));
+  const background=dark>bright?'DARK':'LIGHT';
+
+  // Estimate the dominant movement from the horizontal distribution of colored pixels.
+  const bins=7,points=[];
+  for(let b=0;b<bins;b++){
+   const s=Math.floor(b*w/bins),e=Math.floor((b+1)*w/bins);let total=0,weighted=0;
+   for(let x=s;x<e;x++){
+    const c=col[x]; if(c){total+=c;weighted+=x*c;}
+   }
+   points.push(total?weighted/total:null);
+  }
+  const valid=points.filter(Number.isFinite);let movement='RANGE / UNCLEAR',slope=0;
+  if(valid.length>=2){slope=valid[valid.length-1]-valid[0];const threshold=w*.025;if(slope>threshold)movement='UPWARD';else if(slope<-threshold)movement='DOWNWARD';}
+
+  // Horizontal activity zones are used only as relative chart zones, never as fake prices.
+  const rowThreshold=Math.max(3,Math.round(w*.006));
+  const zones=[];
+  for(let y=0;y<h;y++)if(row[y]>=rowThreshold)zones.push(y);
+  const clusters=[];
+  for(const y of zones){const last=clusters[clusters.length-1];if(!last||y-last[last.length-1]>Math.max(4,h*.012))clusters.push([y]);else last.push(y);}
+  const centers=clusters.filter(c=>c.length>=2).map(c=>Math.round(c.reduce((a,b)=>a+b,0)/c.length));
+  const upper=centers.filter(y=>y<h*.45).slice(0,3);
+  const lower=centers.filter(y=>y>h*.55).slice(-3);
+
+  // Candle-color bias is weighted, but extreme full-image color coverage is treated cautiously.
+  const colorRatio=colored/Math.max(1,w*h);
+  const balance=Math.abs(green-red)/Math.max(1,colored);
+  let confidence=50;
+  if(visualBias!=='NEUTRAL') confidence+=Math.min(18,Math.round(balance*22));
+  if(movement!=='RANGE / UNCLEAR') confidence+=10;
+  if(centers.length>=2) confidence+=6;
+  if(colorRatio>0.18) confidence-=8; // Large colored UI/indicator areas can distort candle-color detection.
+  confidence=Math.min(90,Math.max(35,confidence));
+
+  const signals=[
+   `${visualBias==='NEUTRAL'?'No strong':visualBias==='BULLISH'?'Bullish':'Bearish'} candle-color bias detected.`,
+   `Visual price movement: ${movement}.`,
+   `Chart color activity: ${density}% of sampled pixels.`,
+   `Detected ${green.toLocaleString()} bullish-color pixels vs ${red.toLocaleString()} bearish-color pixels.`,
+   `Detected ${centers.length} possible horizontal activity zones.`
+  ];
+  if(colorRatio>0.18)signals.push('High color coverage detected; chart UI/indicators may affect the pixel scan.');
+
+  return{available:true,width,height,visualBias,movement,confidence,background,density,green,red,upper,lower,signals};
  }catch(e){return{available:false,signals:['The screenshot loaded, but local image analysis failed.']};}
 }
 
 function runScreenshotAnalysis(){
  if(!imageReady||!localVisual){status('Upload a chart screenshot first');return;}
- status('Analyzing screenshot locally…');const v=localVisual;let bias=v.visualBias;if(bias==='NEUTRAL')bias=v.structure==='BULLISH'?'BULLISH':v.structure==='BEARISH'?'BEARISH':'NEUTRAL';const confidence=v.confidence||50;
+ status('Analyzing screenshot locally…');
+ const v=localVisual;
+ let bias=v.visualBias;
+ if(bias==='NEUTRAL')bias=v.movement==='UPWARD'?'BULLISH':v.movement==='DOWNWARD'?'BEARISH':'NEUTRAL';
+ const confidence=v.confidence||50;
  setText('bias',bias==='BULLISH'?'BUY BIAS':bias==='BEARISH'?'SELL BIAS':'WAIT');
  setText('biasReason',bias==='BULLISH'?'Bullish visual bias detected. Wait for confirmation around the visible zones.':bias==='BEARISH'?'Bearish visual bias detected. Wait for confirmation around the visible zones.':'No strong directional edge was detected. WAIT is the current result.');
  setText('confidence',confidence);if($('confidenceBar'))$('confidenceBar').style.width=`${confidence}%`;
  setText('currentPrice','Not reliably extracted');setText('currentPriceNote','Screenshot-only mode does not invent an exact market price.');setText('sourceNote','Local screenshot analysis');
  setText('entryLevel',bias==='BULLISH'?'Near support + bullish confirmation':bias==='BEARISH'?'Near resistance + bearish confirmation':'No clear entry');
  setText('stopLossLevel',bias==='BULLISH'?'Below bullish invalidation zone':bias==='BEARISH'?'Above bearish invalidation zone':'Not recommended');
- setText('tp1Level',bias==='BULLISH'?'Next visible resistance':bias==='BEARISH'?'Next visible support':'—');setText('tp2Level',bias==='BULLISH'?'Next major resistance':bias==='BEARISH'?'Next major support':'—');setText('tp3Level',bias==='BULLISH'?'Extended resistance':bias==='BEARISH'?'Extended support':'—');
+ setText('tp1Level',bias==='BULLISH'?'Next visible resistance':bias==='BEARISH'?'Next visible support':'—');
+ setText('tp2Level',bias==='BULLISH'?'Next major resistance':bias==='BEARISH'?'Next major support':'—');
+ setText('tp3Level',bias==='BULLISH'?'Extended resistance':bias==='BEARISH'?'Extended support':'—');
  const reasons=[...v.signals,`Background detected as ${v.background}.`,v.lower.length?`Possible support zones: ${v.lower.map(z=>Math.round(z/v.height*100)+'% chart height').join(', ')}.`:'No reliable lower support zone detected.',v.upper.length?`Possible resistance zones: ${v.upper.map(z=>Math.round(z/v.height*100)+'% chart height').join(', ')}.`:'No reliable upper resistance zone detected.','Exact price levels are intentionally not fabricated from pixels.'];
  if($('reasoning'))$('reasoning').innerHTML=reasons.map(r=>`<li>${escapeHtml(r)}</li>`).join('');
  setText('researchSummary',bias==='BULLISH'?'Local screenshot analysis found a bullish visual bias. This is an analytical estimate, not a guaranteed trade signal.':bias==='BEARISH'?'Local screenshot analysis found a bearish visual bias. This is an analytical estimate, not a guaranteed trade signal.':'Local screenshot analysis found no strong directional edge. WAIT is the current result.');
- if($('warningBox')){$('warningBox').hidden=false;$('warningBox').textContent='Screenshot-only mode: live market feeds, TradingView and news are disabled. The analyzer works from visible image patterns only.';}
+ if($('warningBox')){$('warningBox').hidden=false;$('warningBox').textContent='Screenshot-only mode: live market feeds, TradingView, MT5 and news are disabled. The analyzer works from visible image patterns only.';}
  status('LOCAL ANALYSIS COMPLETE');
 }
 resetResults();
