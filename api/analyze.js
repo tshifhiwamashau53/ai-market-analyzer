@@ -18,24 +18,16 @@ export default async function handler(req, res) {
     const hasImage = typeof image === 'string' && image.startsWith('data:image/');
 
     if (!selectedAsset) return res.status(400).json({ error: 'An asset is required.' });
-    if (!market || String(market.asset || '').toUpperCase() !== selectedAsset) return res.status(400).json({ error: 'A fresh live market quote for the selected asset is required.' });
+    if (!market || String(market.asset || '').toUpperCase() !== selectedAsset) return res.status(400).json({ error: 'Market context for the selected asset is required.' });
 
     const price = Number(market.price);
+    const hasNumericPrice = Number.isFinite(price) && price > 0;
     const quoteTime = new Date(market.timestamp).getTime();
-    const ageSeconds = (Date.now() - quoteTime) / 1000;
-    if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ error: 'Live price is invalid. Analysis blocked.' });
-    if (!Number.isFinite(quoteTime) || ageSeconds < -10 || ageSeconds > 10) return res.status(409).json({ error: `LIVE PRICE UNAVAILABLE: quote is stale (${Math.max(0, Math.round(ageSeconds))}s old).` });
+    const hasTimestamp = Number.isFinite(quoteTime);
 
-    if (selectedAsset === 'XAUUSD') {
-      const bid = Number(market.bid);
-      const ask = Number(market.ask);
-      if (market.provider !== 'Exness MT5' || market.broker !== 'Exness') return res.status(409).json({ error: 'EXNESS MT5 QUOTE REQUIRED: XAUUSD must come from the Exness MT5 bridge.' });
-      if (!Number.isFinite(bid) || !Number.isFinite(ask) || bid <= 0 || ask <= 0 || ask < bid) return res.status(409).json({ error: 'EXNESS MT5 QUOTE INVALID: Bid/Ask are required for XAUUSD.' });
-    }
+    const systemPrompt = `You are the research engine for an educational market-intelligence application. ${hasNumericPrice ? 'Use the supplied current market price as context.' : 'The embedded TradingView chart is the live market display, but its exact quote is not exposed to page JavaScript. Never invent or estimate a numeric current price.'} ${hasImage ? 'Analyze the supplied chart screenshot for visible structure and explain only what is actually visible.' : 'No chart image was supplied, so do not pretend to see chart patterns; use only the supplied market context and macro information.'} Return ONLY valid JSON with this exact shape: {"bias":"BULLISH|BEARISH|NEUTRAL|NO TRADE","confidence":0,"reason":"","reasoning":["","",""],"summary":"","priceContext":"","newsRisk":"LOW|MEDIUM|HIGH","warning":""}. Confidence must be 0-100. Keep the response informational and research-oriented. Do not provide order instructions, entry prices, stop-losses, take-profit targets, position sizing, or guarantees. Never invent a price or chart feature. If evidence is insufficient, use NO TRADE or NEUTRAL and explain why.`;
 
-    const systemPrompt = `You are the research engine for an educational market-intelligence application. Use the VERIFIED LIVE quote as the authoritative current-price reference. ${hasImage ? 'Analyze the supplied chart screenshot for visible structure and explain what it shows.' : 'No chart image was supplied, so do not pretend to see chart patterns; use only the supplied live quote and macro context.'} Return ONLY valid JSON with this exact shape: {"bias":"BULLISH|BEARISH|NEUTRAL|NO TRADE","confidence":0,"reason":"","reasoning":["","",""],"summary":"","priceContext":"","newsRisk":"LOW|MEDIUM|HIGH","warning":""}. Confidence must be 0-100. Keep the response informational and research-oriented. Do not provide order instructions, entry prices, stop-losses, take-profit targets, position sizing, or guarantees. Never invent a price or chart feature. If evidence is insufficient, use NO TRADE or NEUTRAL and explain why.`;
-
-    const userPrompt = `Asset: ${asset}\nTimeframe: ${timeframe}\nAnalysis style: ${style}\nResearch profile: ${risk}\nChart supplied: ${hasImage ? 'YES' : 'NO'}\n\nVERIFIED LIVE MARKET QUOTE (captured ${market.timestamp}; age ${Math.round(ageSeconds)} seconds):\n${JSON.stringify(market, null, 2)}\n\nCURRENT MACRO NEWS:\n${JSON.stringify(news || [], null, 2)}\n\nECONOMIC CALENDAR:\n${JSON.stringify(calendar || [], null, 2)}\n\nProvide a concise research summary. ${hasImage ? 'Describe only visible chart evidence and compare it with the current quote.' : 'Focus on current price context, quote quality, macro conditions and what additional chart evidence would be useful.'}`;
+    const userPrompt = `Asset: ${asset}\nTimeframe: ${timeframe}\nAnalysis style: ${style}\nResearch profile: ${risk}\nChart supplied: ${hasImage ? 'YES' : 'NO'}\n\nMARKET CONTEXT:\n${JSON.stringify(market, null, 2)}\n\nCURRENT MACRO NEWS:\n${JSON.stringify(news || [], null, 2)}\n\nECONOMIC CALENDAR:\n${JSON.stringify(calendar || [], null, 2)}\n\nProvide a concise research summary. ${hasImage ? 'Describe only visible chart evidence and compare it with the supplied market context.' : 'Focus on the selected asset, macro conditions, market-data availability and what additional chart evidence would be useful.'}`;
 
     const userContent = [{ type: 'input_text', text: userPrompt }];
     if (hasImage) userContent.push({ type: 'input_image', image_url: image });
@@ -62,9 +54,9 @@ export default async function handler(req, res) {
       chartUsed: hasImage,
       model: process.env.OPENAI_MODEL || 'gpt-5.6-luna',
       analyzedAt: new Date().toISOString(),
-      livePriceUsed: price,
-      livePriceTimestamp: market.timestamp,
-      liveProvider: market.provider,
+      livePriceUsed: hasNumericPrice ? price : null,
+      livePriceTimestamp: hasTimestamp ? market.timestamp : null,
+      liveProvider: market.provider || 'TradingView',
       liveBid: Number.isFinite(Number(market.bid)) ? Number(market.bid) : null,
       liveAsk: Number.isFinite(Number(market.ask)) ? Number(market.ask) : null
     });
