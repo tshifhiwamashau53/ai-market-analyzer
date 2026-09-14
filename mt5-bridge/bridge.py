@@ -11,6 +11,16 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 HOST = "127.0.0.1"
 PORT = int(os.getenv("MT5_BRIDGE_PORT", "8765"))
 
+TIMEFRAMES = {
+    "1m": mt5.TIMEFRAME_M1,
+    "5m": mt5.TIMEFRAME_M5,
+    "15m": mt5.TIMEFRAME_M15,
+    "30m": mt5.TIMEFRAME_M30,
+    "1h": mt5.TIMEFRAME_H1,
+    "4h": mt5.TIMEFRAME_H4,
+    "1d": mt5.TIMEFRAME_D1,
+}
+
 
 def connect_mt5():
     if mt5.terminal_info() is not None:
@@ -93,7 +103,6 @@ def discover_symbols():
         except Exception:
             bid = ask = 0
 
-        # Only expose symbols that can currently provide a usable quote.
         if bid <= 0 or ask <= 0 or ask < bid:
             continue
 
@@ -125,7 +134,6 @@ def resolve_symbol(asset: str):
     if exact:
         return exact[0]["symbol"]
 
-    # Exness account suffixes can differ, e.g. XAUUSDm/XAUUSDc.
     candidates = [
         s for s in symbols
         if s["symbol"].upper().startswith(target)
@@ -134,12 +142,37 @@ def resolve_symbol(asset: str):
     if candidates:
         return candidates[0]["symbol"]
 
-    # Last-resort prefix match, still against the broker's discovered symbols.
     prefix = [s for s in symbols if s["symbol"].upper().startswith(target)]
     if prefix:
         return prefix[0]["symbol"]
 
     raise RuntimeError(f"No available MT5 instrument matches {target}")
+
+
+def historical_rates(symbol: str, interval: str, limit: int):
+    if not connect_mt5():
+        code, message = mt5.last_error()
+        raise RuntimeError(f"MT5 connection failed: {code} {message}")
+    ensure_symbol(symbol)
+    timeframe = TIMEFRAMES.get(interval.lower())
+    if timeframe is None:
+        raise RuntimeError(f"Unsupported interval: {interval}")
+    rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, limit)
+    if rates is None or len(rates) < 50:
+        code, message = mt5.last_error()
+        raise RuntimeError(f"Not enough historical candles for {symbol}: {code} {message}")
+
+    candles = []
+    for row in rates:
+        candles.append({
+            "time": datetime.fromtimestamp(int(row["time"]), tz=timezone.utc).isoformat().replace("+00:00", "Z"),
+            "open": float(row["open"]),
+            "high": float(row["high"]),
+            "low": float(row["low"]),
+            "close": float(row["close"]),
+            "volume": float(row["tick_volume"]),
+        })
+    return candles
 
 
 @app.get("/health")
@@ -151,7 +184,8 @@ def health():
         "provider": "Exness MT5",
         "terminalConnected": bool(terminal),
         "readOnly": True,
-        "instrumentDiscovery": "enabled"
+        "instrumentDiscovery": "enabled",
+        "historicalCandles": "enabled"
     }), (200 if connected else 503)
 
 
@@ -193,9 +227,39 @@ def quote():
         return jsonify({"ok": False, "error": "EXNESS_MT5_QUOTE_UNAVAILABLE", "details": str(exc)}), 503
 
 
+@app.get("/candles")
+def candles():
+    asset = request.args.get("asset", "XAUUSD").strip().upper()
+    interval = request.args.get("interval", "5m").strip().lower()
+    try:
+        requested_symbol = request.args.get("symbol", "").strip()
+        symbol = requested_symbol or resolve_symbol(asset)
+        limit = min(max(int(request.args.get("limit", "200")), 50), 500)
+        items = historical_rates(symbol, interval, limit)
+        latest = items[-1]
+        return jsonify({
+            "ok": True,
+            "asset": asset,
+            "providerSymbol": symbol,
+            "provider": "Exness MT5",
+            "broker": "Exness",
+            "source": "Local MetaTrader 5 terminal",
+            "timeframe": interval,
+            "timestamp": latest["time"],
+            "price": latest["close"],
+            "bid": None,
+            "ask": None,
+            "candles": items,
+            "note": "Read-only historical OHLC data from the locally connected MT5 terminal."
+        })
+    except Exception as exc:
+        return jsonify({"ok": False, "error": "EXNESS_MT5_CANDLES_UNAVAILABLE", "details": str(exc)}), 503
+
+
 if __name__ == "__main__":
     print(f"Exness MT5 read-only bridge listening on http://{HOST}:{PORT}")
     print("Instrument discovery: /symbols")
     print("Symbol resolver: /resolve?asset=XAUUSD")
     print("Live quote: /quote?symbol=XAUUSDm")
+    print("Historical OHLC: /candles?asset=XAUUSD&interval=5m&limit=200")
     app.run(host=HOST, port=PORT, debug=False)
