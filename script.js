@@ -53,11 +53,10 @@ async function fetchJson(url, options = {}) { const response = await fetch(url, 
 function renderTradingView() {
   const container = $('tradingview_chart');
   if (!container) return;
-  container.innerHTML = '';
   const asset = $('asset').value;
   const interval = TV_INTERVALS[$('timeframe').value] || '5';
   const symbol = TV_SYMBOLS[asset] || TV_SYMBOLS.XAUUSD;
-  setText('tvStatus', 'LIVE FEED');
+  setText('tvStatus', 'LOADING');
   setText('liveAsset', asset);
   setText('heroAsset', asset);
   setText('livePrice', 'See chart');
@@ -72,12 +71,20 @@ function renderTradingView() {
   setText('currentPriceNote', `${asset} · TradingView live chart`);
   setText('bidAsk', 'TradingView');
   setText('spreadNote', 'Bid/Ask is not exposed to the webpage by the embedded chart.');
-  if (typeof TradingView === 'undefined' || typeof TradingView.widget !== 'function') {
-    container.innerHTML = '<div class="tv-error">TradingView could not be loaded. Check your internet connection and refresh the page.</div>';
-    setText('tvStatus', 'LOAD ERROR');
-    return;
-  }
-  new TradingView.widget({
+
+  container.innerHTML = `
+    <div class="tradingview-widget-container" style="height:100%;width:100%">
+      <div class="tradingview-widget-container__widget" style="height:calc(100% - 32px);width:100%"></div>
+      <div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Chart</span></a><span class="trademark"> by TradingView</span></div>
+    </div>`;
+
+  const widgetContainer = container.querySelector('.tradingview-widget-container');
+  const widget = container.querySelector('.tradingview-widget-container__widget');
+  const script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+  script.async = true;
+  script.innerHTML = JSON.stringify({
     autosize: true,
     symbol,
     interval,
@@ -85,13 +92,31 @@ function renderTradingView() {
     theme: 'dark',
     style: '1',
     locale: 'en',
-    enable_publishing: false,
     allow_symbol_change: false,
+    hide_side_toolbar: false,
     hide_top_toolbar: false,
     hide_legend: false,
+    hide_volume: false,
+    withdateranges: true,
     save_image: false,
-    container_id: 'tradingview_chart'
+    calendar: false,
+    details: false,
+    hotlist: false,
+    support_host: 'https://www.tradingview.com'
   });
+
+  script.addEventListener('error', () => {
+    container.innerHTML = '<div class="tv-error">TradingView chart failed to load. Refresh the page. If it still fails, the TradingView widget script may be blocked by the browser or network.</div>';
+    setText('tvStatus', 'LOAD ERROR');
+  });
+
+  widget.appendChild(script);
+  if (!widgetContainer) {
+    container.innerHTML = '<div class="tv-error">TradingView chart container could not be created.</div>';
+    setText('tvStatus', 'LOAD ERROR');
+    return;
+  }
+  setText('tvStatus', 'LIVE FEED');
 }
 
 function buildMarketContext() {
