@@ -3,44 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="AI-powered market chart analyzer interface for technical analysis, market bias, levels and news context." />
+  <meta name="description" content="AI-powered market chart analyzer interface with macro news and economic calendar." />
   <title>AI Market Analyzer</title>
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="./" aria-label="AI Market Analyzer home">
-      <img src="assets/logo.svg" alt="" />
-      <span>AI Market Analyzer</span>
-    </a>
+    <a class="brand" href="./" aria-label="AI Market Analyzer home"><img src="assets/logo.svg" alt="" /><span>AI Market Analyzer</span></a>
     <div class="status"><span class="status-dot"></span> Analysis Engine Ready</div>
   </header>
 
   <main class="container">
     <section class="hero">
-      <div>
-        <p class="eyebrow">VISION + MARKET INTELLIGENCE</p>
-        <h1>Read the chart.<br /><span>Understand the market.</span></h1>
-        <p class="hero-copy">Upload a trading chart and prepare a structured analysis of market bias, key levels, risk zones and news context.</p>
-      </div>
+      <div><p class="eyebrow">VISION + MARKET INTELLIGENCE</p><h1>Read the chart.<br /><span>Understand the market.</span></h1><p class="hero-copy">Upload a trading chart and combine technical structure with macroeconomic context, market-moving events and scheduled releases.</p></div>
       <div class="hero-badge">AI<br /><strong>ANALYSIS</strong></div>
     </section>
 
     <section class="workspace">
       <div class="panel upload-panel">
         <div class="panel-title"><div><span class="step">01</span><h2>Chart screenshot</h2></div><span class="tag">VISION</span></div>
-        <label class="dropzone" id="dropzone" for="chartInput">
-          <input id="chartInput" type="file" accept="image/png,image/jpeg,image/webp" hidden />
-          <div class="upload-icon">↑</div>
-          <strong>Drop your chart here</strong>
-          <span>or click to browse</span>
-          <small>PNG, JPG or WEBP · Max 10 MB</small>
-        </label>
-        <div class="preview-wrap" id="previewWrap" hidden>
-          <img id="chartPreview" alt="Uploaded chart preview" />
-          <button type="button" class="remove-btn" id="removeImage">Remove image</button>
-        </div>
+        <label class="dropzone" id="dropzone" for="chartInput"><input id="chartInput" type="file" accept="image/png,image/jpeg,image/webp" hidden /><div class="upload-icon">↑</div><strong>Drop your chart here</strong><span>or click to browse</span><small>PNG, JPG or WEBP · Max 10 MB</small></label>
+        <div class="preview-wrap" id="previewWrap" hidden><img id="chartPreview" alt="Uploaded chart preview" /><button type="button" class="remove-btn" id="removeImage">Remove image</button></div>
       </div>
 
       <div class="panel settings-panel">
@@ -51,17 +35,13 @@
           <label>Analysis style<select id="style"><option>Price Action</option><option>ICT / Liquidity</option><option>SMC</option><option>Technical Overview</option></select></label>
           <label>Risk profile<select id="risk"><option>Conservative</option><option>Balanced</option><option>Aggressive</option></select></label>
         </div>
-        <label class="news-toggle"><input id="includeNews" type="checkbox" checked /><span class="toggle"></span><span><strong>Include news context</strong><small>Check economic events and market headlines when the backend is connected.</small></span></label>
+        <label class="news-toggle"><input id="includeNews" type="checkbox" checked /><span class="toggle"></span><span><strong>Include macro/news context</strong><small>Include high-impact economic events and current market headlines.</small></span></label>
         <button class="analyze-btn" id="analyzeBtn" type="button"><span>Analyze market</span><span>→</span></button>
       </div>
     </section>
 
     <section class="dashboard" id="dashboard" aria-live="polite">
-      <div class="dashboard-head">
-        <div><p class="eyebrow">ANALYSIS OUTPUT</p><h2>Market intelligence</h2></div>
-        <div class="analysis-meta" id="analysisMeta">Waiting for chart</div>
-      </div>
-
+      <div class="dashboard-head"><div><p class="eyebrow">ANALYSIS OUTPUT</p><h2>Market intelligence</h2></div><div class="analysis-meta" id="analysisMeta">Waiting for chart</div></div>
       <div class="result-grid">
         <article class="result-card bias-card"><div class="card-label">MARKET BIAS</div><div class="bias" id="bias">NO TRADE</div><p id="biasReason">Upload a chart and run analysis.</p></article>
         <article class="result-card confidence-card"><div class="card-label">CONFIDENCE</div><div class="confidence"><span id="confidence">—</span><small>%</small></div><div class="meter"><span id="confidenceBar"></span></div><p>Confidence is an analytical estimate, not a guarantee.</p></article>
@@ -71,13 +51,15 @@
 
       <div class="levels-grid">
         <article class="panel targets-panel"><div class="panel-title"><div><span class="step">03</span><h2>Targets</h2></div><span class="tag">R:R</span></div><div class="target-row"><span>TP1</span><strong id="tp1">—</strong><small id="rr1">—</small></div><div class="target-row"><span>TP2</span><strong id="tp2">—</strong><small id="rr2">—</small></div><div class="target-row"><span>TP3</span><strong id="tp3">—</strong><small id="rr3">—</small></div></article>
-        <article class="panel reasoning-panel"><div class="panel-title"><div><span class="step">04</span><h2>AI reasoning</h2></div><span class="tag">SIGNALS</span></div><ul id="reasoning"><li>Chart structure will appear here.</li><li>Liquidity and key levels will be assessed by the backend.</li><li>News impact will be shown when live news is enabled.</li></ul></article>
+        <article class="panel reasoning-panel"><div class="panel-title"><div><span class="step">04</span><h2>AI reasoning</h2></div><span class="tag">SIGNALS</span></div><ul id="reasoning"><li>Chart structure will appear here.</li><li>Liquidity and key levels will be assessed by the backend.</li><li>Macro event risk will be checked before a final analysis.</li></ul></article>
       </div>
 
-      <article class="panel news-panel"><div class="panel-title"><div><span class="step">05</span><h2>News &amp; macro context</h2></div><span class="tag" id="newsStatus">READY</span></div><div id="newsList" class="news-list"><div class="empty-news">No live news loaded yet. The production backend will populate this area with timestamped headlines and an impact assessment.</div></div></article>
+      <article class="panel news-panel"><div class="panel-title"><div><span class="step">05</span><h2>Market-moving macro news</h2></div><span class="tag" id="newsStatus">READY</span></div><div id="newsList" class="news-list"></div></article>
+
+      <article class="panel calendar-panel"><div class="panel-title"><div><span class="step">06</span><h2>Economic calendar</h2></div><div class="calendar-filters"><select id="calendarFilter"><option value="all">All high-impact</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="JPY">JPY</option></select><span class="tag">LIVE FEED READY</span></div></div><p class="calendar-note">High-impact releases are prioritized because they can materially change volatility and interest-rate expectations. Times are displayed in the release source's timezone until the backend adds automatic local-time conversion.</p><div id="calendarList" class="calendar-list"></div></article>
     </section>
 
-    <footer><span>AI Market Analyzer</span><span>For educational and research purposes. AI analysis can be wrong; verify levels before making decisions.</span></footer>
+    <footer><span>AI Market Analyzer</span><span>For educational and research purposes. AI analysis can be wrong; verify information independently.</span></footer>
   </main>
   <script src="script.js"></script>
 </body>
