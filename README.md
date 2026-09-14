@@ -1,33 +1,96 @@
 # AI Market Analyzer
 
-An API-free market research application for chart context, technical analysis, market news and economic events.
+A no-paid-AI market research application that can load a chart screenshot, detect basic chart visuals locally in the browser, calculate technical indicators, evaluate market structure, and produce a BUY / SELL / WAIT research result.
 
-## Current version
+## Target version
 
-- Chart screenshot upload and local preview
-- No OpenAI API key required
-- Local rule-based market analysis
-- EMA 20 / EMA 50 trend structure
-- RSI 14 momentum
-- ATR 14 volatility estimate
-- Recent support and resistance estimates
-- BUY-side / SELL-side directional bias as **BULLISH / BEARISH / NEUTRAL** research output
+1. Upload a chart screenshot.
+2. Detect basic chart information locally in the browser.
+3. Calculate technical indicators from verified OHLC data when available.
+4. Determine **BUY / SELL / WAIT**.
+5. Identify support, resistance and market structure.
+6. Generate suggested entry, stop-loss and take-profit levels when verified price/ATR data exists.
+7. Show a confidence score.
+8. Explain the reasons behind the result.
+9. No `OPENAI_API_KEY`.
+10. No paid AI API.
+11. No credit/billing failure screen.
+
+## Local screenshot detection
+
+Uploaded screenshots stay in the browser. The app uses a small canvas-based pixel detector to identify basic visual signals such as red/green candle-color balance, chart color density and the approximate vertical range containing detected colored chart marks.
+
+This is deliberately a **local heuristic**, not a claim that the browser can perfectly understand every chart screenshot. The screenshot detector is used as an additional signal and does not invent exact prices from pixels.
+
+## Technical engine
+
+The deterministic local engine calculates:
+
+- EMA 20
+- EMA 50
+- RSI 14
+- ATR 14
+- Recent support
+- Recent resistance
+- Basic bullish/bearish/neutral market structure
+- BUY / SELL / WAIT decision
 - Confidence score
-- Mathematical entry reference, stop-loss estimate and three target estimates when verified OHLC data is available
-- Current market-moving news feed
-- Economic calendar
-- TradingView live chart
-- Responsive desktop/mobile layout
+- Entry reference
+- Stop-loss estimate
+- TP1 / TP2 / TP3 estimates
 
-## Important: no paid AI API
+When evidence is mixed, the engine returns **WAIT** instead of forcing a trade direction.
 
-The application no longer calls OpenAI or any paid AI/vision service. The `/api/analyze` endpoint is now a local rule engine. It receives the available market data and calculates the research output using deterministic JavaScript rules.
+## No paid AI API
 
-A screenshot can still be uploaded for reference. It remains in the browser and is **not** sent to an AI provider. The local engine does not pretend to understand pixels that it cannot reliably measure.
+The application does not call OpenAI or another paid AI/vision service. `/api/analyze` is a deterministic rule engine.
 
-## Backend
+There is no `OPENAI_API_KEY` requirement and no dependency on AI credits. If the serverless analyzer cannot be reached, the browser continues with a local fallback instead of showing an AI-credit failure screen.
 
-The repository uses serverless `/api` functions for data retrieval and local calculations:
+## Market data
+
+BTCUSD, ETHUSD and SOLUSD can use public read-only Binance OHLC data through `/api/market-data`.
+
+XAUUSD can use the optional local MT5 bridge. This is important for the intended XAUUSD 5M workflow because the bridge can provide broker-specific historical candles instead of inventing gold prices from a screenshot.
+
+## MT5 bridge
+
+The `mt5-bridge/` folder contains a read-only Python service connected to the locally installed MetaTrader 5 terminal. It does not place trades or manage an account.
+
+Install and start it:
+
+```powershell
+py -m pip install -r requirements.txt
+py bridge.py
+```
+
+Verify the connection:
+
+```text
+http://127.0.0.1:8765/health
+```
+
+Resolve the broker's XAUUSD symbol:
+
+```text
+http://127.0.0.1:8765/resolve?asset=XAUUSD
+```
+
+Read a quote:
+
+```text
+http://127.0.0.1:8765/quote?symbol=XAUUSDm
+```
+
+Read historical candles:
+
+```text
+http://127.0.0.1:8765/candles?asset=XAUUSD&interval=5m&limit=200
+```
+
+The web app automatically tries the local MT5 candle feed for XAUUSD before falling back to the normal serverless market-data route.
+
+## App endpoints
 
 ```text
 GET  /api/market?asset=BTCUSD
@@ -37,52 +100,35 @@ GET  /api/market-data?asset=BTCUSD&interval=5m
 POST /api/analyze
 ```
 
-These are application endpoints, not paid AI APIs. The local analyzer itself does not require an AI API key.
-
-## Market data
-
-Machine-readable OHLC analysis is currently enabled for BTCUSD, ETHUSD and SOLUSD through public Binance market data. Other instruments continue to use the TradingView chart unless another verified OHLC provider is configured.
-
-For XAUUSD, the repository also contains an optional local MT5 read-only bridge under `mt5-bridge/`. This can provide broker-specific XAUUSD quotes from a connected MetaTrader 5 terminal, but the current local rule engine does not invent OHLC history from a single quote.
-
-## MT5 bridge
-
-The `mt5-bridge/` folder contains a small Python service that reads a current quote from a locally connected MetaTrader 5 terminal. It is read-only and contains no order placement or account-management functions.
-
-Start it from the `mt5-bridge` directory:
-
-```powershell
-py -m pip install -r requirements.txt
-py bridge.py
-```
-
-Then verify:
-
-```text
-http://127.0.0.1:8765/health
-http://127.0.0.1:8765/quote?symbol=XAUUSDm
-```
+These are application/data endpoints, not paid AI APIs.
 
 ## Architecture
 
 ```text
-User
-  |
-  +--> TradingView chart
-  |
-  +--> Optional screenshot (browser only)
-  |
-  +--> Public/read-only market data
-            |
-            v
-     Local rule engine
-       |   |   |   |
-      EMA RSI ATR S/R
-            |
-            v
-   Bias + confidence + levels
-            |
-            +--> News + calendar context
+Chart screenshot
+      |
+      v
+Browser canvas pixel detector
+      |
+      +-------------------+
+      |                   |
+Verified OHLC data     Visual signals
+      |                   |
+      +---------+---------+
+                v
+        Local rule engine
+       EMA / RSI / ATR / S-R
+                |
+                v
+          BUY / SELL / WAIT
+                |
+       +--------+--------+
+       |        |        |
+    Entry      SL       TP1/2/3
+       |
+       +--> Confidence + explanation
+       |
+       +--> News / economic-event context
 ```
 
 ## Disclaimer
