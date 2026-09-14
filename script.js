@@ -12,24 +12,68 @@ let liveNews = [];
 let liveCalendar = [];
 
 function showPreview(file) {
-  if (!file || !file.type.startsWith('image/')) return;
-  if (file.size > 10 * 1024 * 1024) { alert('Please choose an image smaller than 10 MB.'); return; }
+  if (!file) return;
+  if (!file.type || !file.type.match(/^image\/(png|jpeg|webp)$/i)) {
+    alert('Please choose a PNG, JPG/JPEG or WEBP image.');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    alert('Please choose an image smaller than 10 MB.');
+    return;
+  }
+
   const reader = new FileReader();
-  reader.onload = async (event) => {
-    imageDataUrl = event.target.result;
+  reader.onerror = () => alert('The image could not be read. Please try another image.');
+  reader.onload = () => {
+    if (typeof reader.result !== 'string' || !reader.result.startsWith('data:image/')) {
+      alert('The selected image could not be loaded.');
+      return;
+    }
+    imageDataUrl = reader.result;
     preview.src = imageDataUrl;
-    previewWrap.hidden = false;
-    dropzone.hidden = true;
-    imageReady = true;
-    $('analysisMeta').textContent = `${file.name} · chart loaded`;
+    preview.onload = () => {
+      previewWrap.hidden = false;
+      dropzone.hidden = true;
+      imageReady = true;
+      setText('analysisMeta', `${file.name} · chart loaded`);
+    };
+    preview.onerror = () => {
+      imageReady = false;
+      imageDataUrl = '';
+      preview.src = '';
+      alert('The image preview could not be displayed. Please try a PNG or JPG image.');
+    };
   };
   reader.readAsDataURL(file);
 }
 
-input.addEventListener('change', (e) => showPreview(e.target.files[0]));
-['dragenter','dragover'].forEach(type => dropzone.addEventListener(type, e => { e.preventDefault(); dropzone.classList.add('dragover'); }));
-['dragleave','drop'].forEach(type => dropzone.addEventListener(type, e => { e.preventDefault(); dropzone.classList.remove('dragover'); }));
-dropzone.addEventListener('drop', e => showPreview(e.dataTransfer.files[0]));
+input.addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (file) showPreview(file);
+});
+
+['dragenter', 'dragover'].forEach(type => dropzone.addEventListener(type, e => {
+  e.preventDefault();
+  e.stopPropagation();
+  dropzone.classList.add('dragover');
+}));
+['dragleave', 'drop'].forEach(type => dropzone.addEventListener(type, e => {
+  e.preventDefault();
+  e.stopPropagation();
+  dropzone.classList.remove('dragover');
+}));
+dropzone.addEventListener('drop', e => {
+  const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (file) showPreview(file);
+});
+
+dropzone.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    input.click();
+  }
+});
+
 $('removeImage').addEventListener('click', () => {
   input.value = '';
   preview.src = '';
@@ -37,7 +81,7 @@ $('removeImage').addEventListener('click', () => {
   dropzone.hidden = false;
   imageReady = false;
   imageDataUrl = '';
-  $('analysisMeta').textContent = 'Ready for analysis';
+  setText('analysisMeta', 'Ready for analysis');
 });
 
 function formatPrice(value) {
@@ -57,7 +101,7 @@ function formatDate(value) {
 
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, { cache: 'no-store', ...options });
-  const data = await response.json();
+  const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
   return data;
 }
@@ -92,7 +136,7 @@ async function fetchLiveMarket({ requiredFresh = false } = {}) {
   const data = await fetchJson(`/api/market?asset=${encodeURIComponent(asset)}&fresh=${Date.now()}`);
   const capturedAt = new Date(data.timestamp).getTime();
   const ageSeconds = (Date.now() - capturedAt) / 1000;
-  if (!Number.isFinite(data.price) || data.price <= 0) throw new Error('The market provider returned an invalid price.');
+  if (!Number.isFinite(Number(data.price)) || Number(data.price) <= 0) throw new Error('The market provider returned an invalid price.');
   if (!Number.isFinite(capturedAt) || ageSeconds < -10 || ageSeconds > 90) throw new Error(`LIVE PRICE UNAVAILABLE: quote is stale (${Math.max(0, Math.round(ageSeconds))}s old).`);
   liveMarket = { ...data, clientCapturedAt: new Date().toISOString(), clientAgeSeconds: Math.max(0, Math.round(ageSeconds)) };
   renderLiveQuote(liveMarket, false);
@@ -173,6 +217,7 @@ function renderCalendar() {
   }
   $('calendarList').innerHTML = events.map(e => `<article class="calendar-item"><div class="calendar-date"><strong>${formatDate(e.date)}</strong><span>${e.currency || ''}</span></div><div class="calendar-event"><div><b>${e.currency || ''}</b><span class="impact-high">${e.impact || 'EVENT'}</span></div><h3>${e.title}</h3><p>Actual: ${e.actual ?? '—'} · Forecast: ${e.forecast ?? '—'} · Previous: ${e.previous ?? '—'}</p></div></article>`).join('');
 }
+
 $('calendarFilter').addEventListener('change', renderCalendar);
 $('asset').addEventListener('change', async () => { await refreshLiveContext(); });
 
