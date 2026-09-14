@@ -9,69 +9,24 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="./"><img src="assets/logo.svg" alt="" /><span>AI Market Analyzer</span></a>
-    <nav class="nav" aria-label="Primary navigation">
-      <a href="#workspace">Analyze</a><a href="#market">Market</a><a href="#news">News</a><a href="#calendar">Calendar</a>
-    </nav>
-    <div class="status"><span class="status-dot"></span> LIVE ENGINE</div>
-  </header>
-
+  <header class="topbar"><a class="brand" href="./"><img src="assets/logo.svg" alt="" /><span>AI Market Analyzer</span></a><nav class="nav" aria-label="Primary navigation"><a href="#workspace">Analyze</a><a href="#market">Market</a><a href="#news">News</a><a href="#calendar">Calendar</a></nav><div class="status"><span class="status-dot"></span> LIVE ENGINE</div></header>
   <main class="container">
-    <section class="hero">
-      <div><p class="eyebrow">MARKET INTELLIGENCE WORKSPACE</p><h1>See the market.<br /><span>Understand the context.</span></h1><p class="hero-copy">A structured research dashboard combining a fresh market quote, optional chart vision, macro headlines and economic events in one place.</p></div>
-      <div class="hero-stats"><span>LIVE QUOTE</span><strong id="heroPrice">—</strong><small id="heroAsset">XAUUSD</small></div>
-    </section>
-
+    <section class="hero"><div><p class="eyebrow">MARKET INTELLIGENCE WORKSPACE</p><h1>See the market.<br /><span>Understand the context.</span></h1><p class="hero-copy">A structured research dashboard combining a fresh market quote, optional chart vision, macro headlines and economic events in one place.</p></div><div class="hero-stats"><span>LIVE QUOTE</span><strong id="heroPrice">—</strong><small id="heroAsset">XAUUSD</small></div></section>
     <section class="workspace" id="workspace">
-      <div class="panel upload-panel">
-        <div class="panel-title"><div><span class="step">01</span><h2>Chart vision</h2></div><span class="tag">OPTIONAL</span></div>
-        <label class="dropzone" id="dropzone" for="chartInput"><input id="chartInput" type="file" accept="image/png,image/jpeg,image/webp" hidden /><div class="upload-icon">＋</div><strong>Add a chart screenshot</strong><span>Optional — live market research works without it</span><small>PNG, JPG or WEBP · Max 10 MB</small></label>
+      <div class="panel upload-panel"><div class="panel-title"><div><span class="step">01</span><h2>Chart vision</h2></div><span class="tag">OPTIONAL</span></div>
+        <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Upload a chart screenshot">
+          <input id="chartInput" class="file-input" type="file" accept="image/*" aria-label="Choose chart image" />
+          <div class="upload-icon">＋</div><strong>Add a chart screenshot</strong><span>Click anywhere here or drag an image into this area</span><small>PNG, JPG, JPEG or WEBP · Max 10 MB</small>
+        </div>
         <div class="preview-wrap" id="previewWrap" hidden><img id="chartPreview" alt="Uploaded chart preview" /><button type="button" class="remove-btn" id="removeImage">Remove image</button></div>
       </div>
-
-      <div class="panel settings-panel">
-        <div class="panel-title"><div><span class="step">02</span><h2>Analysis controls</h2></div><span class="tag">INPUT</span></div>
-        <div class="field-grid">
-          <label>Asset<select id="asset"><option>XAUUSD</option><option>BTCUSD</option><option>US30</option><option>EURUSD</option><option>GBPUSD</option><option>ETHUSD</option></select></label>
-          <label>Timeframe<select id="timeframe"><option>5M</option><option>15M</option><option>1H</option><option>4H</option><option>1D</option></select></label>
-          <label>Analysis style<select id="style"><option>Price Action</option><option>ICT / Liquidity</option><option>SMC</option><option>Technical Overview</option></select></label>
-          <label>Risk profile<select id="risk"><option>Conservative</option><option>Balanced</option><option>Aggressive</option></select></label>
-        </div>
-        <label class="news-toggle"><input id="includeNews" type="checkbox" checked /><span class="toggle"></span><span><strong>Include macro/news context</strong><small>Use current headlines and high-impact events in the research summary.</small></span></label>
-        <button class="analyze-btn" id="analyzeBtn" type="button"><span>Analyze current market</span><span>→</span></button>
-      </div>
+      <div class="panel settings-panel"><div class="panel-title"><div><span class="step">02</span><h2>Analysis controls</h2></div><span class="tag">INPUT</span></div><div class="field-grid"><label>Asset<select id="asset"><option>XAUUSD</option><option>BTCUSD</option><option>US30</option><option>EURUSD</option><option>GBPUSD</option><option>ETHUSD</option></select></label><label>Timeframe<select id="timeframe"><option>5M</option><option>15M</option><option>1H</option><option>4H</option><option>1D</option></select></label><label>Analysis style<select id="style"><option>Price Action</option><option>ICT / Liquidity</option><option>SMC</option><option>Technical Overview</option></select></label><label>Risk profile<select id="risk"><option>Conservative</option><option>Balanced</option><option>Aggressive</option></select></label></div><label class="news-toggle"><input id="includeNews" type="checkbox" checked /><span class="toggle"></span><span><strong>Include macro/news context</strong><small>Use current headlines and high-impact events in the research summary.</small></span></label><button class="analyze-btn" id="analyzeBtn" type="button"><span>Analyze current market</span><span>→</span></button></div>
     </section>
-
-    <section class="live-strip" id="market" aria-live="polite">
-      <div><span class="live-dot"></span><strong>LIVE MARKET</strong><small id="liveUpdated">Waiting for quote…</small></div>
-      <div class="live-price"><span id="liveAsset">XAUUSD</span><strong id="livePrice">—</strong><span id="liveChange">—</span></div>
-      <div class="live-source" id="liveSource">The quote will be refreshed when the dashboard loads.</div>
-    </section>
-
-    <section class="dashboard" id="results" aria-live="polite">
-      <div class="dashboard-head"><div><p class="eyebrow">01 / RESEARCH OUTPUT</p><h2>Market intelligence</h2></div><div class="analysis-meta" id="analysisMeta">Ready for analysis</div></div>
-      <div class="result-grid">
-        <article class="result-card bias-card"><div class="card-label">MARKET DIRECTION</div><div class="bias" id="bias">WAITING</div><p id="biasReason">Press Analyze current market to generate a fresh research summary.</p></article>
-        <article class="result-card"><div class="card-label">CURRENT PRICE</div><div class="level" id="currentPrice">—</div><p id="currentPriceNote">Fresh quote required.</p></article>
-        <article class="result-card"><div class="card-label">BID / ASK</div><div class="quote-pair" id="bidAsk">— / —</div><p id="spreadNote">Spread unavailable.</p></article>
-        <article class="result-card"><div class="card-label">CONFIDENCE</div><div class="confidence"><span id="confidence">—</span><small>%</small></div><div class="meter"><span id="confidenceBar"></span></div><p>Analytical estimate, not a guarantee.</p></article>
-      </div>
-
-      <div class="levels-grid">
-        <article class="panel targets-panel"><div class="panel-title"><div><span class="step">02</span><h2>Price context</h2></div><span class="tag">READ-ONLY</span></div><div class="context-stack"><div><span>Provider</span><strong id="providerName">—</strong></div><div><span>Broker symbol</span><strong id="providerSymbol">—</strong></div><div><span>Captured</span><strong id="quoteCaptured">—</strong></div><div><span>Market state</span><strong id="marketState">—</strong></div></div></article>
-        <article class="panel reasoning-panel"><div class="panel-title"><div><span class="step">03</span><h2>AI research reasoning</h2></div><span class="tag">INSIGHTS</span></div><ul id="reasoning"><li>Fresh quote context will appear here.</li><li>Chart observations are included when an image is uploaded.</li><li>News and calendar risk are checked when enabled.</li></ul></article>
-      </div>
-
-      <article class="panel summary-panel"><div class="panel-title"><div><span class="step">04</span><h2>Research summary</h2></div><span class="tag">AI</span></div><p id="researchSummary">No analysis yet. The app will use the latest verified quote and available context.</p><div class="warning-box" id="warningBox" hidden></div></article>
-    </section>
-
+    <section class="live-strip" id="market" aria-live="polite"><div><span class="live-dot"></span><strong>LIVE MARKET</strong><small id="liveUpdated">Waiting for quote…</small></div><div class="live-price"><span id="liveAsset">XAUUSD</span><strong id="livePrice">—</strong><span id="liveChange">—</span></div><div class="live-source" id="liveSource">The quote will be refreshed when the dashboard loads.</div></section>
+    <section class="dashboard" id="results" aria-live="polite"><div class="dashboard-head"><div><p class="eyebrow">01 / RESEARCH OUTPUT</p><h2>Market intelligence</h2></div><div class="analysis-meta" id="analysisMeta">Ready for analysis</div></div><div class="result-grid"><article class="result-card bias-card"><div class="card-label">MARKET DIRECTION</div><div class="bias" id="bias">WAITING</div><p id="biasReason">Press Analyze current market to generate a fresh research summary.</p></article><article class="result-card"><div class="card-label">CURRENT PRICE</div><div class="level" id="currentPrice">—</div><p id="currentPriceNote">Fresh quote required.</p></article><article class="result-card"><div class="card-label">BID / ASK</div><div class="quote-pair" id="bidAsk">— / —</div><p id="spreadNote">Spread unavailable.</p></article><article class="result-card"><div class="card-label">CONFIDENCE</div><div class="confidence"><span id="confidence">—</span><small>%</small></div><div class="meter"><span id="confidenceBar"></span></div><p>Analytical estimate, not a guarantee.</p></article></div><div class="levels-grid"><article class="panel targets-panel"><div class="panel-title"><div><span class="step">02</span><h2>Price context</h2></div><span class="tag">READ-ONLY</span></div><div class="context-stack"><div><span>Provider</span><strong id="providerName">—</strong></div><div><span>Broker symbol</span><strong id="providerSymbol">—</strong></div><div><span>Captured</span><strong id="quoteCaptured">—</strong></div><div><span>Market state</span><strong id="marketState">—</strong></div></div></article><article class="panel reasoning-panel"><div class="panel-title"><div><span class="step">03</span><h2>AI research reasoning</h2></div><span class="tag">INSIGHTS</span></div><ul id="reasoning"><li>Fresh quote context will appear here.</li><li>Chart observations are included when an image is uploaded.</li><li>News and calendar risk are checked when enabled.</li></ul></article></div><article class="panel summary-panel"><div class="panel-title"><div><span class="step">04</span><h2>Research summary</h2></div><span class="tag">AI</span></div><p id="researchSummary">No analysis yet. The app will use the latest verified quote and available context.</p><div class="warning-box" id="warningBox" hidden></div></article></section>
     <section class="panel news-panel" id="news"><div class="panel-title"><div><span class="step">05</span><h2>Market-moving news</h2></div><span class="tag" id="newsStatus">WAITING</span></div><div id="newsList" class="news-list"></div></section>
-
     <section class="panel calendar-panel" id="calendar"><div class="panel-title"><div><span class="step">06</span><h2>Economic calendar</h2></div><div class="calendar-filters"><select id="calendarFilter"><option value="all">All high-impact</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="JPY">JPY</option></select><span class="tag">LIVE FEED</span></div></div><p class="calendar-note">High-impact releases are prioritized. Actual, forecast and previous values appear when the connected provider supplies them.</p><div id="calendarList" class="calendar-list"></div></section>
-
     <footer><span>AI Market Analyzer</span><span>Educational and research use. Verify live data and independent sources.</span></footer>
-  </main>
-  <script src="script.js"></script>
+  </main><script src="script.js"></script>
 </body>
 </html>
