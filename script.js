@@ -4,6 +4,7 @@ const dropzone = $('dropzone');
 const previewWrap = $('previewWrap');
 const preview = $('chartPreview');
 const analyzeBtn = $('analyzeBtn');
+const MT5_BRIDGE = 'http://127.0.0.1:8765';
 let imageReady = false;
 let imageDataUrl = '';
 let liveMarket = null;
@@ -67,9 +68,56 @@ async function fetchJson(url, options = {}) {
   return data;
 }
 
+async function fetchExnessMT5Quote() {
+  const symbol = encodeURIComponent(window.MT5_XAUUSD_SYMBOL || 'XAUUSDm');
+  const data = await fetchJson(`${MT5_BRIDGE}/quote?symbol=${symbol}&fresh=${Date.now()}`);
+  if (data.provider !== 'Exness MT5' || data.broker !== 'Exness') {
+    throw new Error('EXNESS MT5 QUOTE REJECTED: unexpected broker/source.');
+  }
+  if (!data.timestamp || !Number.isFinite(Number(data.bid)) || !Number.isFinite(Number(data.ask))) {
+    throw new Error('EXNESS MT5 QUOTE REJECTED: missing Bid/Ask/timestamp.');
+  }
+
+  const capturedAt = new Date(data.timestamp).getTime();
+  const ageSeconds = (Date.now() - capturedAt) / 1000;
+  if (!Number.isFinite(capturedAt) || ageSeconds < -10 || ageSeconds > 10) {
+    throw new Error(`LIVE XAUUSD UNAVAILABLE: Exness MT5 quote is stale (${Math.max(0, Math.round(ageSeconds))}s old).`);
+  }
+
+  return {
+    ...data,
+    asset: 'XAUUSD',
+    price: Number(data.price),
+    clientCapturedAt: new Date().toISOString(),
+    clientAgeSeconds: Math.max(0, Math.round(ageSeconds))
+  };
+}
+
 async function fetchLiveMarket({ requiredFresh = false } = {}) {
   const asset = $('asset').value;
-  // Cache-buster makes every Analyze click request a new server-side quote.
+
+  // XAUUSD is broker-specific. Never substitute Yahoo, futures or another generic feed.
+  if (asset === 'XAUUSD') {
+    try {
+      const data = await fetchExnessMT5Quote();
+      liveMarket = data;
+      $('liveAsset').textContent = asset;
+      $('livePrice').textContent = formatPrice(data.price);
+      const sign = Number(data.change) >= 0 ? '+' : '';
+      $('liveChange').textContent = data.changePct != null ? `${sign}${Number(data.changePct || 0).toFixed(2)}%` : `Spread ${formatPrice(data.spread)}`;
+      $('liveUpdated').textContent = `Exness MT5 · Bid ${formatPrice(data.bid)} · Ask ${formatPrice(data.ask)} · ${data.clientAgeSeconds}s old`;
+      $('liveSource').textContent = `${data.provider} · ${data.providerSymbol} · read-only broker quote`;
+      $('liveSource').classList.remove('error');
+      return liveMarket;
+    } catch (error) {
+      liveMarket = null;
+      $('liveSource').textContent = error.message;
+      $('liveSource').classList.add('error');
+      if (requiredFresh) throw error;
+      throw error;
+    }
+  }
+
   const data = await fetchJson(`/api/market?asset=${encodeURIComponent(asset)}&fresh=${Date.now()}`);
   const capturedAt = new Date(data.timestamp).getTime();
   const ageSeconds = (Date.now() - capturedAt) / 1000;
@@ -105,7 +153,9 @@ async function fetchLiveCalendar() {
 }
 
 async function refreshLiveContext({ requireFreshMarket = false } = {}) {
-  $('liveSource').textContent = 'Fetching a fresh current market quote…';
+  $('liveSource').textContent = $('asset').value === 'XAUUSD'
+    ? 'Connecting to local Exness MT5…'
+    : 'Fetching a fresh current market quote…';
   $('liveSource').classList.remove('error');
   try {
     await fetchLiveMarket({ requiredFresh: requireFreshMarket });
@@ -158,7 +208,10 @@ function renderAnalysis(data) {
   setText('rr3', data.rr3 || '—');
   setText('confidence', confidence);
   $('confidenceBar').style.width = `${confidence}%`;
-  setText('entryNote', liveMarket ? `${$('asset').value} · ${$('timeframe').value} · live reference ${formatPrice(liveMarket.price)} · captured ${formatDate(liveMarket.timestamp)}` : 'Live price unavailable.');
+  const brokerContext = liveMarket?.provider === 'Exness MT5'
+    ? `Exness MT5 Bid ${formatPrice(liveMarket.bid)} · Ask ${formatPrice(liveMarket.ask)} · ${liveMarket.providerSymbol}`
+    : `live reference ${formatPrice(liveMarket?.price)}`;
+  setText('entryNote', liveMarket ? `${$('asset').value} · ${$('timeframe').value} · ${brokerContext} · captured ${formatDate(liveMarket.timestamp)}` : 'Live price unavailable.');
   setText('analysisMeta', `${$('asset').value} · ${$('timeframe').value} · ${formatDate(data.analyzedAt)}`);
   $('reasoning').innerHTML = [
     ...(Array.isArray(data.reasoning) ? data.reasoning : []),
@@ -176,7 +229,7 @@ analyzeBtn.addEventListener('click', async () => {
   analyzeBtn.querySelector('span').textContent = 'Reading fresh live market + chart…';
 
   try {
-    // This is deliberately mandatory. No stale quote, demo price or hard-coded fallback.
+    // Mandatory: XAUUSD must come directly from the local Exness MT5 bridge.
     await refreshLiveContext({ requireFreshMarket: true });
     if (!liveMarket) throw new Error('LIVE PRICE UNAVAILABLE');
 
@@ -207,8 +260,8 @@ analyzeBtn.addEventListener('click', async () => {
     setText('tp1', '—');
     setText('tp2', '—');
     setText('tp3', '—');
-    setText('analysisMeta', 'Analysis blocked — fresh live price required');
-    $('reasoning').innerHTML = '<li>No trading setup was generated.</li><li>A fresh live market quote could not be verified at the moment Analyze was pressed.</li><li>The app will not substitute an old, cached or demo price.</li>';
+    setText('analysisMeta', 'Analysis blocked — fresh Exness MT5 quote required');
+    $('reasoning').innerHTML = '<li>No setup was generated.</li><li>A fresh Exness MT5 XAUUSD quote could not be verified at the moment Analyze was pressed.</li><li>The app will not substitute an old, generic, futures or demo price for XAUUSD.</li>';
   } finally {
     analyzeBtn.querySelector('span').textContent = 'Analyze market';
     analyzeBtn.disabled = false;
@@ -220,4 +273,4 @@ renderMacroNews();
 renderCalendar();
 
 // Keep the displayed quote fresh while the page is open.
-setInterval(() => { if (imageReady) fetchLiveMarket().catch(() => {}); }, 30000);
+setInterval(() => { if (imageReady) fetchLiveMarket().catch(() => {}); }, 10000);
