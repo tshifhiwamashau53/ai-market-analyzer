@@ -1,140 +1,21 @@
 const $ = id => document.getElementById(id);
-const input = $('chartInput'), dropzone = $('dropzone'), previewWrap = $('previewWrap'), preview = $('chartPreview'), analyzeBtn = $('analyzeBtn');
-let imageReady = false, localVisual = null;
-const setText = (id,v) => { const e=$(id); if(e) e.textContent = v ?? '—'; };
-const esc = (v='') => String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-const status = t => setText('analysisMeta',t);
-
-function showPreview(file){
- if(!file)return;
- if(!file.type?.startsWith('image/'))return alert('Please select a PNG, JPG or WEBP chart screenshot.');
- if(file.size>10*1024*1024)return alert('Please choose an image smaller than 10 MB.');
- const r=new FileReader();
- r.onload=()=>{preview.onload=()=>{imageReady=true;previewWrap.hidden=false;dropzone.hidden=true;status(`${file.name} · screenshot loaded`);localVisual=analyzeChartImage(preview);setTimeout(runScreenshotAnalysis,150);};preview.onerror=()=>{imageReady=false;localVisual=null;alert('The image could not be read.');};preview.src=r.result;};r.readAsDataURL(file);
-}
+const input=$('chartInput'),dropzone=$('dropzone'),previewWrap=$('previewWrap'),preview=$('chartPreview'),analyzeBtn=$('analyzeBtn');
+let imageReady=false,localVisual=null;
+const setText=(id,v)=>{const e=$(id);if(e)e.textContent=v??'—';};
+const esc=(v='')=>String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const status=t=>setText('analysisMeta',t);
+function showPreview(file){if(!file)return;if(!file.type?.startsWith('image/'))return alert('Please select a PNG, JPG or WEBP chart screenshot.');if(file.size>10*1024*1024)return alert('Please choose an image smaller than 10 MB.');const r=new FileReader();r.onload=()=>{preview.onload=async()=>{imageReady=true;previewWrap.hidden=false;dropzone.hidden=true;status(`${file.name} · screenshot loaded`);localVisual=analyzeChartImage(preview);setTimeout(runScreenshotAnalysis,100);};preview.onerror=()=>alert('The image could not be read.');preview.src=r.result;};r.readAsDataURL(file);}
 input.addEventListener('change',e=>showPreview(e.target.files?.[0]));
-dropzone.addEventListener('click',e=>{if(e.target!==input)input.click();});
-dropzone.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click();}});
-['dragenter','dragover'].forEach(t=>dropzone.addEventListener(t,e=>{e.preventDefault();dropzone.classList.add('dragover');}));
-['dragleave','drop'].forEach(t=>dropzone.addEventListener(t,e=>{e.preventDefault();dropzone.classList.remove('dragover');}));
+dropzone.addEventListener('click',e=>{if(e.target!==input)input.click()});
+dropzone.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}});
+['dragenter','dragover'].forEach(t=>dropzone.addEventListener(t,e=>{e.preventDefault();dropzone.classList.add('dragover')}));
+['dragleave','drop'].forEach(t=>dropzone.addEventListener(t,e=>{e.preventDefault();dropzone.classList.remove('dragover')}));
 dropzone.addEventListener('drop',e=>showPreview(e.dataTransfer?.files?.[0]));
-$('removeImage').addEventListener('click',()=>{input.value='';preview.src='';previewWrap.hidden=true;dropzone.hidden=false;imageReady=false;localVisual=null;resetResults();status('Upload a chart screenshot to begin');});
+$('removeImage').addEventListener('click',()=>{input.value='';preview.src='';previewWrap.hidden=true;dropzone.hidden=false;imageReady=false;localVisual=null;resetResults();status('Upload a chart screenshot to begin')});
 analyzeBtn.addEventListener('click',runScreenshotAnalysis);
-
-function resetResults(){
- setText('bias','WAIT');setText('biasReason','Upload a chart screenshot.');setText('confidence','—');
- if($('confidenceBar'))$('confidenceBar').style.width='0%';
- setText('currentPrice','Not extracted');setText('currentPriceNote','Exact prices are not invented from screenshot pixels.');setText('sourceNote','Local screenshot analysis');
- setText('entryLevel','Visual zone');setText('stopLossLevel','Visual invalidation');setText('tp1Level','Next visible zone');setText('tp2Level','Next major zone');setText('tp3Level','Extended zone');
- if($('reasoning'))$('reasoning').innerHTML='<li>Waiting for screenshot analysis.</li><li>No paid AI API is required.</li>';
- setText('researchSummary','Upload your chart screenshot. Analysis runs locally in your browser.');
- if($('warningBox'))$('warningBox').hidden=true;
-}
-
-function analyzeChartImage(img){
- try{
-  const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height;
-  if(!iw||!ih)return{available:false,signals:['Image dimensions could not be read.']};
-  const scale=Math.min(1,1400/iw),w=Math.max(1,Math.round(iw*scale)),h=Math.max(1,Math.round(ih*scale));
-  const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,w,h);const p=ctx.getImageData(0,0,w,h).data;
-  let red=0,green=0,dark=0,bright=0,colored=0;const col=new Array(w).fill(0),row=new Array(h).fill(0),redCol=new Array(w).fill(0),greenCol=new Array(w).fill(0);
-  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
-   const i=(y*w+x)*4,r=p[i],g=p[i+1],b=p[i+2],mx=Math.max(r,g,b);if(mx>215)bright++;if(mx<65)dark++;
-   const R=r>115&&r>g*1.22&&r>b*1.12,G=g>95&&g>r*1.16&&g>b*1.03;
-   if(R||G){colored++;col[x]++;row[y]++;if(R){red++;redCol[x]++;}if(G){green++;greenCol[x]++;}}
-  }
-  const density=Math.round(colored/(w*h)*100),colorRatio=colored/Math.max(1,w*h);
-  const visualBias=colored<30?'NEUTRAL':green>red*1.1?'BULLISH':red>green*1.1?'BEARISH':'NEUTRAL';
-  const background=dark>bright?'DARK':'LIGHT';
-
-  // Find the likely chart plot area by locating sustained colored activity. This reduces the effect of logos, menus and sidebars.
-  const activeCols=[];const colCut=Math.max(2,Math.round(h*.004));
-  for(let x=0;x<w;x++)if(col[x]>=colCut)activeCols.push(x);
-  let plotL=0,plotR=w-1;
-  if(activeCols.length>20){plotL=Math.max(0,Math.min(...activeCols)-Math.round(w*.01));plotR=Math.min(w-1,Math.max(...activeCols)+Math.round(w*.01));}
-
-  // Candle-like columns: narrow vertical colored structures with a meaningful local peak.
-  const candleCandidates=[];
-  const step=Math.max(1,Math.round(w/900));
-  for(let x=plotL;x<=plotR;x+=step){
-   const height=col[x],r=redCol[x],g=greenCol[x];
-   if(height<Math.max(3,Math.round(h*.012))||Math.max(r,g)<2)continue;
-   const left=col[Math.max(plotL,x-step)],right=col[Math.min(plotR,x+step)];
-   if(height>=left*.75&&height>=right*.75){
-    const bias=g>r*1.12?'BULLISH':r>g*1.12?'BEARISH':'MIXED';
-    candleCandidates.push({x,height,r,g,bias});
-   }
-  }
-  // Merge neighboring detections into candle groups.
-  const candles=[];
-  for(const q of candleCandidates){const last=candles[candles.length-1];if(last&&q.x-last.x<=Math.max(3,w*.012)){last.x=Math.round((last.x+q.x)/2);last.height=Math.max(last.height,q.height);last.r=Math.max(last.r,q.r);last.g=Math.max(last.g,q.g);}else candles.push({...q});}
-  const usable=candles.slice(-60);
-
-  // Estimate each candle's vertical center from its colored pixels.
-  for(const cd of usable){
-   const x=Math.round(cd.x),radius=Math.max(1,Math.round(w*.004));let ys=[],rs=0,gs=0;
-   for(let xx=Math.max(plotL,x-radius);xx<=Math.min(plotR,x+radius);xx++){
-    for(let y=0;y<h;y++){const i=(y*w+xx)*4,r=p[i],g=p[i+1],b=p[i+2],R=r>115&&r>g*1.22&&r>b*1.12,G=g>95&&g>r*1.16&&g>b*1.03;if(R||G){ys.push(y);if(R)rs++;if(G)gs++;}}
-   }
-   if(ys.length){cd.high=Math.min(...ys);cd.low=Math.max(...ys);cd.mid=(cd.high+cd.low)/2;cd.bodyBias=gs>rs*1.12?'BULLISH':rs>gs*1.12?'BEARISH':'MIXED';}
-  }
-
-  // Market structure from the sequence of detected candle midpoints.
-  const pts=usable.filter(x=>Number.isFinite(x.mid));let movement='RANGE / UNCLEAR';let slope=0;
-  if(pts.length>=5){const first=pts.slice(0,Math.max(2,Math.floor(pts.length*.35))).reduce((a,b)=>a+b.mid,0)/Math.max(2,Math.floor(pts.length*.35));const last=pts.slice(-Math.max(2,Math.floor(pts.length*.35))).reduce((a,b)=>a+b.mid,0)/Math.max(2,Math.floor(pts.length*.35));slope=first-last;const threshold=h*.025;if(slope>threshold)movement='UPWARD';else if(slope<-threshold)movement='DOWNWARD';}
-  const highs=[],lows=[];
-  for(let i=2;i<pts.length-2;i++){if(pts[i].high<pts[i-1].high&&pts[i].high<pts[i+1].high)highs.push(pts[i]);if(pts[i].low>pts[i-1].low&&pts[i].low>pts[i+1].low)lows.push(pts[i]);}
-  let structure='UNCLEAR';
-  if(highs.length>=2&&lows.length>=2){const hh=highs.at(-1).high<highs.at(-2).high,hl=lows.at(-1).low<lows.at(-2).low;const lh=highs.at(-1).high>highs.at(-2).high,ll=lows.at(-1).low>lows.at(-2).low;if(hh&&hl)structure='HIGHER HIGHS / HIGHER LOWS';else if(lh&&ll)structure='LOWER HIGHS / LOWER LOWS';else structure='MIXED / RANGE';}
-
-  // Wick/rejection and BOS/CHOCH heuristics from recent extrema.
-  let rejection='NONE DETECTED',bos='NONE DETECTED',sweep='NONE DETECTED';
-  if(pts.length>=6){const recent=pts.slice(-6),last=recent.at(-1);const range=Math.max(...recent.map(q=>q.low))-Math.min(...recent.map(q=>q.high));const body=Math.max(2,Math.abs((recent.at(-2)?.mid||last.mid)-last.mid));const upper=last.mid-last.high,lower=last.low-last.mid;if(lower>body*1.8&&lower>range*.18)rejection='LOWER-WICK REJECTION';if(upper>body*1.8&&upper>range*.18)rejection='UPPER-WICK REJECTION';const priorHigh=Math.min(...recent.slice(0,-1).map(q=>q.high)),priorLow=Math.max(...recent.slice(0,-1).map(q=>q.low));if(last.high<priorHigh&&last.low<priorLow)bos='BEARISH BREAK';if(last.high>priorHigh&&last.low>priorLow)bos='BULLISH BREAK';if((last.low<priorLow&&last.mid>priorLow)||(last.high>priorHigh&&last.mid<priorHigh))sweep='POSSIBLE LIQUIDITY SWEEP';}
-
-  // Horizontal zones: repeated rows of activity, reported only as chart percentages.
-  const rowThreshold=Math.max(3,Math.round(w*.006)),rows=[];for(let y=0;y<h;y++)if(row[y]>=rowThreshold)rows.push(y);const clusters=[];
-  for(const y of rows){const last=clusters.at(-1);if(!last||y-last.at(-1)>Math.max(4,h*.012))clusters.push([y]);else last.push(y);}
-  const centers=clusters.filter(a=>a.length>=2).map(a=>Math.round(a.reduce((x,y)=>x+y,0)/a.length));
-  const upper=centers.filter(y=>y<h*.45).slice(0,3),lower=centers.filter(y=>y>h*.55).slice(-3);
-
-  let confidence=42; if(visualBias!=='NEUTRAL')confidence+=10;if(movement!=='RANGE / UNCLEAR')confidence+=8;if(structure!=='UN CLEAR'&&structure!=='UN CLEAR')confidence+=8;if(rejection!=='NONE DETECTED')confidence+=6;if(bos!=='NONE DETECTED')confidence+=7;if(sweep!=='NONE DETECTED')confidence+=5;if(pts.length>=8)confidence+=5;if(colorRatio>.18)confidence-=10;confidence=Math.max(30,Math.min(91,confidence));
-  const signals=[
-   `${visualBias==='NEUTRAL'?'No strong':visualBias==='BULLISH'?'Bullish':'Bearish'} candle-color bias detected.`,
-   `Detected ${pts.length} candle-like structures in the active chart area.`,
-   `Visual movement: ${movement}.`,
-   `Market structure estimate: ${structure}.`,
-   `Candle rejection: ${rejection}.`,
-   `Break-of-structure heuristic: ${bos}.`,
-   `Liquidity sweep heuristic: ${sweep}.`,
-   `Chart color activity: ${density}% of sampled pixels.`,
-   `Detected ${green.toLocaleString()} bullish-color pixels vs ${red.toLocaleString()} bearish-color pixels.`
-  ];
-  if(colorRatio>.18)signals.push('High color coverage detected; indicators or chart UI may distort pixel detection.');
-  return{available:true,width:w,height:h,visualBias,movement,structure,rejection,bos,sweep,confidence,background,density,green,red,upper,lower,candles:pts,signals};
- }catch(e){return{available:false,signals:['The screenshot loaded, but local image analysis failed.']};}
-}
-
-function runScreenshotAnalysis(){
- if(!imageReady||!localVisual){status('Upload a chart screenshot first');return;}
- status('Analyzing candles and market structure locally…');const v=localVisual;
- let bias=v.visualBias;
- if(v.bos==='BULLISH BREAK'||v.sweep==='POSSIBLE LIQUIDITY SWEEP'&&v.rejection==='LOWER-WICK REJECTION')bias='BULLISH';
- else if(v.bos==='BEARISH BREAK'||v.sweep==='POSSIBLE LIQUIDITY SWEEP'&&v.rejection==='UPPER-WICK REJECTION')bias='BEARISH';
- else if(bias==='NEUTRAL')bias=v.movement==='UPWARD'?'BULLISH':v.movement==='DOWNWARD'?'BEARISH':'NEUTRAL';
- if(v.structure==='HIGHER HIGHS / HIGHER LOWS'&&bias==='BEARISH')bias='WAIT';
- if(v.structure==='LOWER HIGHS / LOWER LOWS'&&bias==='BULLISH')bias='WAIT';
- const confidence=bias==='WAIT'?Math.max(30,(v.confidence||50)-12):(v.confidence||50);
- setText('bias',bias==='BULLISH'?'BUY BIAS':bias==='BEARISH'?'SELL BIAS':'WAIT');
- setText('biasReason',bias==='BULLISH'?'Bullish structure or rejection is visible. Wait for confirmation before entry.':bias==='BEARISH'?'Bearish structure or rejection is visible. Wait for confirmation before entry.':'Signals conflict or the screenshot does not provide enough structure. WAIT is safer.');
- setText('confidence',confidence);if($('confidenceBar'))$('confidenceBar').style.width=`${confidence}%`;
- setText('currentPrice','Not reliably extracted');setText('currentPriceNote','Exact prices require OCR or verified OHLC data; this version does not invent them.');setText('sourceNote','Local browser image analysis');
- setText('entryLevel',bias==='BULLISH'?'Retest support / bullish confirmation':bias==='BEARISH'?'Retest resistance / bearish confirmation':'No clear entry');
- setText('stopLossLevel',bias==='BULLISH'?'Below recent swing low':bias==='BEARISH'?'Above recent swing high':'Not recommended');
- setText('tp1Level',bias==='BULLISH'?'Nearest resistance zone':bias==='BEARISH'?'Nearest support zone':'—');setText('tp2Level',bias==='BULLISH'?'Next structure high':bias==='BEARISH'?'Next structure low':'—');setText('tp3Level',bias==='BULLISH'?'Extended resistance':'Extended support');
- const reasons=[...v.signals,`Background detected as ${v.background}.`,v.lower.length?`Possible support zones: ${v.lower.map(z=>Math.round(z/v.height*100)+'% chart height').join(', ')}.`:'No reliable lower support zone detected.',v.upper.length?`Possible resistance zones: ${v.upper.map(z=>Math.round(z/v.height*100)+'% chart height').join(', ')}.`:'No reliable upper resistance zone detected.','Exact entry, SL and TP prices are intentionally not fabricated from image pixels.'];
- if($('reasoning'))$('reasoning').innerHTML=reasons.map(x=>`<li>${esc(x)}</li>`).join('');
- setText('researchSummary',bias==='BULLISH'?'The local engine found a bullish visual setup using candle color, structure and rejection/BOS heuristics. This is an estimate, not a guaranteed trade signal.':bias==='BEARISH'?'The local engine found a bearish visual setup using candle color, structure and rejection/BOS heuristics. This is an estimate, not a guaranteed trade signal.':'The local engine found mixed or insufficient evidence. WAIT is the current result.');
- if($('warningBox')){$('warningBox').hidden=false;$('warningBox').textContent='Screenshot-only mode: no TradingView, MT5, live feed, news or paid AI API is used. Candle detection and structure recognition are local image heuristics and can be wrong.';}
- status('LOCAL CANDLE + STRUCTURE ANALYSIS COMPLETE');
-}
+function resetResults(){setText('bias','WAIT');setText('biasReason','Upload a chart screenshot.');setText('confidence','—');if($('confidenceBar'))$('confidenceBar').style.width='0%';setText('currentPrice','—');setText('currentPriceNote','The current price is read from the green price marker on the screenshot.');setText('sourceNote','Local screenshot analysis');setText('entryLevel','—');setText('stopLossLevel','—');setText('tp1Level','—');setText('tp2Level','—');setText('tp3Level','—');if($('reasoning'))$('reasoning').innerHTML='<li>Waiting for screenshot analysis.</li>';setText('researchSummary','Upload your chart screenshot.');if($('warningBox'))$('warningBox').hidden=true;}
+function analyzeChartImage(img){try{const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;if(!iw||!ih)return{available:false};const scale=Math.min(1,1400/iw),w=Math.max(1,Math.round(iw*scale)),h=Math.max(1,Math.round(ih*scale));const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,w,h);const p=ctx.getImageData(0,0,w,h).data;let red=0,green=0,dark=0,bright=0,colored=0;const col=new Array(w).fill(0),row=new Array(h).fill(0),redCol=new Array(w).fill(0),greenCol=new Array(w).fill(0);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4,r=p[i],g=p[i+1],b=p[i+2],mx=Math.max(r,g,b);if(mx>215)bright++;if(mx<65)dark++;const R=r>115&&r>g*1.22&&r>b*1.12,G=g>95&&g>r*1.16&&g>b*1.03;if(R||G){colored++;col[x]++;row[y]++;if(R){red++;redCol[x]++}if(G){green++;greenCol[x]++}}}const density=Math.round(colored/(w*h)*100),colorRatio=colored/Math.max(1,w*h),visualBias=colored<30?'NEUTRAL':green>red*1.1?'BULLISH':red>green*1.1?'BEARISH':'NEUTRAL';const activeCols=[];for(let x=0;x<w;x++)if(col[x]>=Math.max(2,Math.round(h*.004)))activeCols.push(x);let plotL=0,plotR=w-1;if(activeCols.length>20){plotL=Math.max(0,Math.min(...activeCols)-Math.round(w*.01));plotR=Math.min(w-1,Math.max(...activeCols)+Math.round(w*.01))}const candidates=[];for(let x=plotL;x<=plotR;x++){const height=col[x],r=redCol[x],g=greenCol[x];if(height<Math.max(3,Math.round(h*.012))||Math.max(r,g)<2)continue;const left=col[Math.max(plotL,x-1)],right=col[Math.min(plotR,x+1)];if(height>=left*.75&&height>=right*.75)candidates.push({x,height,r,g})}const candles=[];for(const q of candidates){const last=candles.at(-1);if(last&&q.x-last.x<=Math.max(3,w*.012)){last.x=Math.round((last.x+q.x)/2);last.height=Math.max(last.height,q.height);last.r=Math.max(last.r,q.r);last.g=Math.max(last.g,q.g)}else candles.push({...q})}for(const cd of candles.slice(-60)){const x=Math.round(cd.x),radius=Math.max(1,Math.round(w*.004)),ys=[];for(let xx=Math.max(plotL,x-radius);xx<=Math.min(plotR,x+radius);xx++)for(let y=0;y<h;y++){const i=(y*w+xx)*4,r=p[i],g=p[i+1],b=p[i+2],R=r>115&&r>g*1.22&&r>b*1.12,G=g>95&&g>r*1.16&&g>b*1.03;if(R||G)ys.push(y)}if(ys.length){cd.high=Math.min(...ys);cd.low=Math.max(...ys);cd.mid=(cd.high+cd.low)/2}}const pts=candles.slice(-60).filter(x=>Number.isFinite(x.mid));let movement='RANGE / UNCLEAR';if(pts.length>=5){const n=Math.max(2,Math.floor(pts.length*.35)),first=pts.slice(0,n).reduce((a,b)=>a+b.mid,0)/n,last=pts.slice(-n).reduce((a,b)=>a+b.mid,0)/n,diff=first-last;if(diff>h*.025)movement='UPWARD';else if(diff<-h*.025)movement='DOWNWARD'}let confidence=42;if(visualBias!=='NEUTRAL')confidence+=10;if(movement!=='RANGE / UNCLEAR')confidence+=8;if(pts.length>=8)confidence+=10;if(colorRatio>.18)confidence-=10;confidence=Math.max(30,Math.min(85,confidence));return{available:true,width:w,height:h,visualBias,movement,confidence,density,green,red,candles:pts,background:dark>bright?'DARK':'LIGHT'};}catch(e){return{available:false}}}
+function greenMarkerCandidates(img){const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;if(!iw||!ih)return[];const scale=Math.min(1,1800/iw),w=Math.round(iw*scale),h=Math.round(ih*scale),c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,w,h);const d=ctx.getImageData(0,0,w,h).data;const xs=[],ys=[];for(let y=0;y<h;y++)for(let x=Math.floor(w*.55);x<w;x++){const i=(y*w+x)*4,r=d[i],g=d[i+1],b=d[i+2];if(g>110&&g>r*1.18&&g>b*1.05&&g-r>25){xs.push(x);ys.push(y)}}if(xs.length<8)return[];const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);const bands=[];for(let y=minY;y<=maxY;y+=2){let count=0;for(let x=minX;x<=maxX;x+=2){const i=(y*w+x)*4,r=d[i],g=d[i+1],b=d[i+2];if(g>110&&g>r*1.18&&g>b*1.05&&g-r>25)count++}if(count>3)bands.push(y)}const groups=[];for(const y of bands){const last=groups.at(-1);if(!last||y-last.at(-1)>6)groups.push([y]);else last.push(y)}return groups.filter(g=>g.length>=2).map(g=>({y:Math.round(g.reduce((a,b)=>a+b,0)/g.length),minX,maxX,minY:g[0],maxY:g.at(-1),score:g.length})).sort((a,b)=>b.score-a.score).slice(0,8)}
+async function readGreenPrice(img){if(!window.Tesseract)return null;try{const markers=greenMarkerCandidates(img);if(!markers.length)return null;const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;const best=markers.sort((a,b)=>Math.abs((a.y/((ih)||1))-.5)-Math.abs((b.y/((ih)||1))-.5))[0];const scale=Math.min(1,1800/iw),w=Math.round(iw*scale),h=Math.round(ih*scale),c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');ctx.drawImage(img,0,0,w,h);const padX=Math.round(w*.035),padY=Math.max(16,Math.round(h*.025));const left=Math.max(0,best.minX-padX),right=Math.min(w,best.maxX+padX),top=Math.max(0,best.y-padY),bottom=Math.min(h,best.y+padY);const crop=document.createElement('canvas');crop.width=right-left;crop.height=bottom-top;crop.getContext('2d').drawImage(c,left,top,crop.width,crop.height,0,0,crop.width,crop.height);const result=await Tesseract.recognize(crop,'eng',{logger:m=>{if(m.status==='recognizing text')status(`Reading green current-price marker… ${Math.round((m.progress||0)*100)}%`)}});const raw=result.data.text.replace(/\n/g,' ').trim();const nums=[...raw.matchAll(/\d{1,3}(?:[,.]\d{3})*(?:[,.]\d{1,5})?/g)].map(m=>m[0]).filter(x=>x.replace(/[,\.]/g,'').length>=2);if(!nums.length)return null;let value=nums[0].replace(/,/g,'');const dots=(value.match(/\./g)||[]).length;if(dots>1)value=value.replace(/\.(?=.*\.)/g,'');if(!/\d/.test(value))return null;return{price:value,raw,markerY:Math.round(best.y/scale),confidence:result.data.confidence||0};}catch(e){return null}}
+async function runScreenshotAnalysis(){if(!imageReady||!localVisual){status('Upload a chart screenshot first');return}status('Analyzing candles and market structure locally…');const v=localVisual;let bias=v.visualBias;if(bias==='NEUTRAL')bias=v.movement==='UPWARD'?'BULLISH':v.movement==='DOWNWARD'?'BEARISH':'NEUTRAL';const current=await readGreenPrice(preview);if(current){setText('currentPrice',current.price);setText('currentPriceNote',`Read from the green current-price marker on the screenshot · OCR confidence ${Math.round(current.confidence)}%.`)}else{setText('currentPrice','Not detected');setText('currentPriceNote','No readable green current-price marker was found. The analyzer will not invent a price.')}setText('bias',bias==='BULLISH'?'BUY BIAS':bias==='BEARISH'?'SELL BIAS':'WAIT');setText('biasReason',bias==='BULLISH'?'Bullish visual structure detected. Wait for confirmation before entry.':bias==='BEARISH'?'Bearish visual structure detected. Wait for confirmation before entry.':'Signals are mixed or unclear.');setText('confidence',v.confidence);if($('confidenceBar'))$('confidenceBar').style.width=`${v.confidence}%`;setText('sourceNote','Screenshot · local candle analysis + green-price OCR');setText('entryLevel',current?`${current.price} · current-price reference`:'Current price not detected');setText('stopLossLevel',bias==='BULLISH'?'Below recent swing low':bias==='BEARISH'?'Above recent swing high':'Not recommended');setText('tp1Level',bias==='BULLISH'?'Nearest resistance above entry':bias==='BEARISH'?'Nearest support below entry':'—');setText('tp2Level',bias==='BULLISH'?'Next resistance structure':bias==='BEARISH'?'Next support structure':'—');setText('tp3Level',bias==='BULLISH'?'Extended resistance':bias==='BEARISH'?'Extended support':'—');const reasons=[`Detected ${v.candles.length} candle-like structures.`,`Visual movement: ${v.movement}.`,`Candle-color bias: ${v.visualBias}.`,`Chart color activity: ${v.density}% of sampled pixels.`,current?`Current price ${current.price} was read from the green price marker on the screenshot.`:'The green current-price marker could not be read.',`Background: ${v.background}.`,'Entry, SL and TP should be based on the screenshot price scale and visible structure; no price is fabricated.'];if($('reasoning'))$('reasoning').innerHTML=reasons.map(x=>`<li>${esc(x)}</li>`).join('');setText('researchSummary',current?`The analyzer identified the green price marker and used ${current.price} as the screenshot current-price reference. Direction is based on local visual candle analysis. This is an analytical estimate, not a guaranteed trade signal.`:'The analyzer could not reliably read the green current-price marker. Upload a clearer screenshot with the right-side price scale visible.');if($('warningBox')){$('warningBox').hidden=false;$('warningBox').textContent='Screenshot-only mode. The green marker is treated as the current price; OCR is used only to read the number printed on that marker.'}status('Analysis complete · green current-price marker checked')}
 resetResults();
