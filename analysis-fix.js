@@ -14,7 +14,7 @@
     const ctx = canvas.getContext('2d', {willReadFrequently:true});
     ctx.drawImage(img, 0, 0, w, h);
     const d = ctx.getImageData(0,0,w,h).data;
-    let bull=0,bear=0,greenStrong=0,redStrong=0;
+    let greenStrong=0,redStrong=0;
     const points=[];
     for(let y=0;y<h;y+=2){
       let green=0,red=0;
@@ -66,8 +66,8 @@
     }catch(e){console.warn('OCR fallback:',e);return null;}
   }
 
-  function targets(price, bias, h, mapping){
-    if(!Number.isFinite(price)) return ['—','—','—','—','—'];
+  function targets(price, bias){
+    if(!Number.isFinite(price) || bias==='NEUTRAL') return ['—','—','—','—','—'];
     const step = Math.max(Math.abs(price)*0.001, 1);
     const long = bias==='BULLISH';
     const entry=price;
@@ -93,24 +93,40 @@
       text('biasReason',`${result.movement} structure detected from the uploaded screenshot.`);
       text('confidence',result.confidence);
       const bar=byId('confidenceBar');if(bar)bar.style.width=result.confidence+'%';
-      text('sourceNote','Local chart image + OCR');
-      text('currentPrice','Reading…');
-      setStatus('Chart scanned · reading price');
-      const price=await ocrPrice(img);
+      text('sourceNote','Local chart image + manual price / OCR');
+
+      const manualRaw=byId('manualCurrentPrice')?.value?.trim() || '';
+      const manualPrice=Number(manualRaw);
+      let price=Number.isFinite(manualPrice) && manualPrice>0 ? manualPrice : null;
+
       if(price!==null){
         text('currentPrice',price.toFixed(Math.abs(price)>=1000?2:4));
-        const levels=targets(price,result.bias,result.h);
+        text('currentPriceNote','Using the current price you entered from the green chart marker.');
+        setStatus('Chart scanned · using entered current price');
+      }else{
+        text('currentPrice','Reading…');
+        setStatus('Chart scanned · reading price');
+        price=await ocrPrice(img);
+        if(price!==null){
+          text('currentPrice',price.toFixed(Math.abs(price)>=1000?2:4));
+          text('currentPriceNote','Price read from the screenshot using OCR.');
+        }
+      }
+
+      if(price!==null){
+        const levels=targets(price,result.bias);
         text('entryLevel',levels[0]);text('stopLossLevel',levels[1]);text('tp1Level',levels[2]);text('tp2Level',levels[3]);text('tp3Level',levels[4]);
       }else{
         text('currentPrice','Not read');
-        text('currentPriceNote','OCR could not confidently read a price from this screenshot.');
+        text('currentPriceNote','Enter the green current-price marker above the chart for a reliable price anchor.');
         ['entryLevel','stopLossLevel','tp1Level','tp2Level','tp3Level'].forEach(id=>text(id,'—'));
       }
+
       const reasons=byId('reasoning');
-      if(reasons) reasons.innerHTML=`<li>Detected visual bias: ${result.bias}.</li><li>Detected price movement: ${result.movement}.</li><li>Chart was processed locally from the uploaded image.</li><li>Price levels are estimates and must be verified against the chart.</li>`;
-      text('researchSummary',`The screenshot was analyzed locally. Direction: ${result.bias}. Structure: ${result.movement}. Confidence: ${result.confidence}%.`);
-      const warning=byId('warningBox');if(warning){warning.hidden=false;warning.textContent='Screenshot analysis is an estimate. Verify the price, direction, entry, SL and TP against the live market before making any trading decision.';}
-      setStatus(price!==null?'Analysis complete':'Analysis complete · price OCR unavailable');
+      if(reasons) reasons.innerHTML=`<li>Detected visual bias: ${result.bias}.</li><li>Detected price movement: ${result.movement}.</li><li>${manualRaw && price!==null ? 'Manual current price was used as the price anchor.' : 'Price was read from the screenshot with OCR.'}</li><li>Entry, SL and TP are calculated from the detected direction and price anchor; verify them against visible support, resistance and liquidity before trading.</li>`;
+      text('researchSummary',`The screenshot was analyzed locally. Direction: ${result.bias}. Structure: ${result.movement}. Confidence: ${result.confidence}%. ${manualRaw && price!==null ? 'The manually entered current price was used as the primary price anchor.' : 'OCR was used for the price anchor.'}`);
+      const warning=byId('warningBox');if(warning){warning.hidden=false;warning.textContent='The typed current price is used as the primary anchor. The suggested Entry / SL / TP are still analytical estimates, not guaranteed valid trading levels. Verify them against the actual chart structure and live market before any trading decision.';}
+      setStatus(price!==null?'Analysis complete':'Analysis complete · current price unavailable');
     }catch(err){
       console.error(err);
       setStatus('Analysis failed');
@@ -121,11 +137,14 @@
     }
   }
 
-  window.addEventListener('load',()=>{
+  const initAnalysisFix = () => {
     const btn=byId('analyzeBtn');
-    if(btn){
-      btn.addEventListener('click',runFixedAnalysis);
+    if(btn && !btn.dataset.fixedAnalysisBound){
+      btn.dataset.fixedAnalysisBound='1';
+      btn.addEventListener('click',runFixedAnalysis,true);
       window.runFixedAnalysis=runFixedAnalysis;
     }
-  });
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initAnalysisFix);
+  else initAnalysisFix();
 })();
