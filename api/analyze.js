@@ -15,10 +15,21 @@ export default async function handler(req, res) {
     const body = req.body || {};
     const { image, asset, timeframe, style, risk, market, news, calendar } = body;
     if (!image || !image.startsWith('data:image/')) return res.status(400).json({ error: 'A chart image is required.' });
+    if (!market || market.asset !== String(asset || '').toUpperCase()) {
+      return res.status(400).json({ error: 'A fresh live market quote for the selected asset is required.' });
+    }
 
-    const systemPrompt = `You are the analysis engine for an educational market-chart research application. Analyze the supplied chart screenshot visually and combine it with the supplied live market quote and macro context. Do not claim certainty. If the screenshot and live quote conflict, explicitly say so. Never invent a price that is not visible or supplied. Return ONLY valid JSON with this exact shape: {"bias":"BULLISH|BEARISH|NEUTRAL|NO TRADE","confidence":0,"entry":"","stopLoss":"","tp1":"","tp2":"","tp3":"","rr1":"","rr2":"","reason":"","reasoning":["","",""],"priceContext":"","newsRisk":"LOW|MEDIUM|HIGH","warning":""}. Confidence must be 0-100. Use NO TRADE when the chart is unclear or conditions conflict. Treat all levels as analytical estimates for research, not guaranteed outcomes.`;
+    const price = Number(market.price);
+    const quoteTime = new Date(market.timestamp).getTime();
+    const ageSeconds = (Date.now() - quoteTime) / 1000;
+    if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ error: 'Live price is invalid. Analysis blocked.' });
+    if (!Number.isFinite(quoteTime) || ageSeconds < -10 || ageSeconds > 90) {
+      return res.status(409).json({ error: `LIVE PRICE UNAVAILABLE: quote is stale (${Math.max(0, Math.round(ageSeconds))}s old).` });
+    }
 
-    const userPrompt = `Asset: ${asset}\nTimeframe: ${timeframe}\nAnalysis style: ${style}\nRisk profile: ${risk}\n\nLIVE MARKET QUOTE:\n${JSON.stringify(market || {}, null, 2)}\n\nCURRENT MACRO NEWS:\n${JSON.stringify(news || [], null, 2)}\n\nECONOMIC CALENDAR:\n${JSON.stringify(calendar || [], null, 2)}\n\nAnalyze the uploaded screenshot. Identify visible market structure, trend, liquidity/sweeps, support/resistance, and whether the live reference price is consistent with the screenshot. Give conservative, research-oriented levels and a clear NO TRADE result if evidence is insufficient.`;
+    const systemPrompt = `You are the analysis engine for an educational market-chart research application. Analyze the supplied chart screenshot visually and combine it with the supplied VERIFIED LIVE market quote and macro context. The live quote is authoritative for the current reference price. Do not claim certainty. If the screenshot and live quote conflict, explicitly say so. Never invent a price that is not visible or supplied. Return ONLY valid JSON with this exact shape: {"bias":"BULLISH|BEARISH|NEUTRAL|NO TRADE","confidence":0,"entry":"","stopLoss":"","tp1":"","tp2":"","tp3":"","rr1":"","rr2":"","rr3":"","reason":"","reasoning":["","",""],"priceContext":"","newsRisk":"LOW|MEDIUM|HIGH","warning":""}. Confidence must be 0-100. Use NO TRADE when the chart is unclear or conditions conflict. Treat all levels as analytical estimates for research, not guaranteed outcomes.`;
+
+    const userPrompt = `Asset: ${asset}\nTimeframe: ${timeframe}\nAnalysis style: ${style}\nRisk profile: ${risk}\n\nVERIFIED LIVE MARKET QUOTE (captured ${market.timestamp}; age ${Math.round(ageSeconds)} seconds):\n${JSON.stringify(market, null, 2)}\n\nCURRENT MACRO NEWS:\n${JSON.stringify(news || [], null, 2)}\n\nECONOMIC CALENDAR:\n${JSON.stringify(calendar || [], null, 2)}\n\nAnalyze the uploaded screenshot. Identify visible market structure, trend, liquidity/sweeps, support/resistance, and whether the verified live reference price is consistent with the screenshot. Base all proposed levels around the supplied current price rather than an old chart price. Give conservative, research-oriented levels and a clear NO TRADE result if evidence is insufficient.`;
 
     const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
@@ -44,7 +55,13 @@ export default async function handler(req, res) {
 
     const text = cleanJson(extractOutputText(data));
     const result = JSON.parse(text);
-    return res.status(200).json({ ...result, model: process.env.OPENAI_MODEL || 'gpt-5.6-luna', analyzedAt: new Date().toISOString() });
+    return res.status(200).json({
+      ...result,
+      model: process.env.OPENAI_MODEL || 'gpt-5.6-luna',
+      analyzedAt: new Date().toISOString(),
+      livePriceUsed: price,
+      livePriceTimestamp: market.timestamp
+    });
   } catch (error) {
     return res.status(500).json({ error: 'AI analysis failed', details: error.message });
   }
