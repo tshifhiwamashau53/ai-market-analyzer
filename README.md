@@ -47,7 +47,7 @@ If the local Exness MT5 bridge is unavailable, XAUUSD analysis is blocked. The a
 
 The `mt5-bridge/` folder contains a small Python service that reads the current quote from the locally connected MetaTrader 5 terminal.
 
-Exness' own documentation demonstrates Python integration with MetaTrader 5 and uses `XAUUSDm` as an example symbol. Symbol suffixes can vary by account/terminal, so the bridge allows `MT5_SYMBOL` to be changed to the exact symbol shown in MT5 Market Watch. citeturn0search0
+Exness documents Python integration with MetaTrader 5 and uses `XAUUSDm` as an example symbol. Symbol suffixes can vary by account/terminal, so the bridge allows `MT5_SYMBOL` to be changed to the exact symbol shown in MT5 Market Watch.
 
 The bridge is **read-only**. It contains no trade execution, order placement or account-management functions.
 
@@ -65,7 +65,7 @@ http://127.0.0.1:8765/health
 http://127.0.0.1:8765/quote?symbol=XAUUSDm
 ```
 
-Keep MetaTrader 5 running and connected to Exness while using XAUUSD in the analyzer. Exness confirms XAUUSD is available on its MT5 platform and that MT5 provides real-time instrument prices. citeturn0search1turn0search5
+Keep MetaTrader 5 running and connected to Exness while using XAUUSD in the analyzer. Exness confirms XAUUSD is available on its MT5 platform and that MT5 provides real-time instrument prices.
 
 ## Backend environment variables
 
