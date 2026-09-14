@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="AI-powered market chart analyzer interface with macro news and economic calendar." />
+  <meta name="description" content="AI-powered market chart analyzer with live market data, macro news and economic calendar." />
   <title>AI Market Analyzer</title>
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="style.css" />
@@ -11,12 +11,12 @@
 <body>
   <header class="topbar">
     <a class="brand" href="./" aria-label="AI Market Analyzer home"><img src="assets/logo.svg" alt="" /><span>AI Market Analyzer</span></a>
-    <div class="status"><span class="status-dot"></span> Analysis Engine Ready</div>
+    <div class="status"><span class="status-dot"></span> Live market engine</div>
   </header>
 
   <main class="container">
     <section class="hero">
-      <div><p class="eyebrow">VISION + MARKET INTELLIGENCE</p><h1>Read the chart.<br /><span>Understand the market.</span></h1><p class="hero-copy">Upload a trading chart and combine technical structure with macroeconomic context, market-moving events and scheduled releases.</p></div>
+      <div><p class="eyebrow">VISION + MARKET INTELLIGENCE</p><h1>Read the chart.<br /><span>Understand the market.</span></h1><p class="hero-copy">Upload a trading chart and combine its structure with the current market price, macroeconomic context, market-moving events and scheduled releases.</p></div>
       <div class="hero-badge">AI<br /><strong>ANALYSIS</strong></div>
     </section>
 
@@ -40,6 +40,12 @@
       </div>
     </section>
 
+    <section class="live-strip" id="liveStrip" aria-live="polite">
+      <div><span class="live-dot"></span><strong>LIVE MARKET CONTEXT</strong><small id="liveUpdated">Waiting for live quote…</small></div>
+      <div class="live-price"><span id="liveAsset">XAUUSD</span><strong id="livePrice">—</strong><span id="liveChange">—</span></div>
+      <div class="live-source" id="liveSource">Live quote will be fetched when you analyze.</div>
+    </section>
+
     <section class="dashboard" id="dashboard" aria-live="polite">
       <div class="dashboard-head"><div><p class="eyebrow">ANALYSIS OUTPUT</p><h2>Market intelligence</h2></div><div class="analysis-meta" id="analysisMeta">Waiting for chart</div></div>
       <div class="result-grid">
@@ -51,12 +57,12 @@
 
       <div class="levels-grid">
         <article class="panel targets-panel"><div class="panel-title"><div><span class="step">03</span><h2>Targets</h2></div><span class="tag">R:R</span></div><div class="target-row"><span>TP1</span><strong id="tp1">—</strong><small id="rr1">—</small></div><div class="target-row"><span>TP2</span><strong id="tp2">—</strong><small id="rr2">—</small></div><div class="target-row"><span>TP3</span><strong id="tp3">—</strong><small id="rr3">—</small></div></article>
-        <article class="panel reasoning-panel"><div class="panel-title"><div><span class="step">04</span><h2>AI reasoning</h2></div><span class="tag">SIGNALS</span></div><ul id="reasoning"><li>Chart structure will appear here.</li><li>Liquidity and key levels will be assessed by the backend.</li><li>Macro event risk will be checked before a final analysis.</li></ul></article>
+        <article class="panel reasoning-panel"><div class="panel-title"><div><span class="step">04</span><h2>AI reasoning</h2></div><span class="tag">SIGNALS</span></div><ul id="reasoning"><li>Chart structure will appear here.</li><li>Live price will be supplied to the AI before it gives an analysis.</li><li>Macro event risk will be checked before a final analysis.</li></ul></article>
       </div>
 
-      <article class="panel news-panel"><div class="panel-title"><div><span class="step">05</span><h2>Market-moving macro news</h2></div><span class="tag" id="newsStatus">READY</span></div><div id="newsList" class="news-list"></div></article>
+      <article class="panel news-panel"><div class="panel-title"><div><span class="step">05</span><h2>Market-moving macro news</h2></div><span class="tag" id="newsStatus">LOADING</span></div><div id="newsList" class="news-list"></div></article>
 
-      <article class="panel calendar-panel"><div class="panel-title"><div><span class="step">06</span><h2>Economic calendar</h2></div><div class="calendar-filters"><select id="calendarFilter"><option value="all">All high-impact</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="JPY">JPY</option></select><span class="tag">LIVE FEED READY</span></div></div><p class="calendar-note">High-impact releases are prioritized because they can materially change volatility and interest-rate expectations. Times are displayed in the release source's timezone until the backend adds automatic local-time conversion.</p><div id="calendarList" class="calendar-list"></div></article>
+      <article class="panel calendar-panel"><div class="panel-title"><div><span class="step">06</span><h2>Economic calendar</h2></div><div class="calendar-filters"><select id="calendarFilter"><option value="all">All high-impact</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="JPY">JPY</option></select><span class="tag">LIVE FEED</span></div></div><p class="calendar-note">High-impact releases are prioritized. Actual, forecast and previous values will be shown when the connected calendar provider supplies them.</p><div id="calendarList" class="calendar-list"></div></article>
     </section>
 
     <footer><span>AI Market Analyzer</span><span>For educational and research purposes. AI analysis can be wrong; verify information independently.</span></footer>
