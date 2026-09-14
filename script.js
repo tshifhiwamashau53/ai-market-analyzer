@@ -11,18 +11,10 @@ let liveNews = [];
 let liveCalendar = [];
 
 const TV_SYMBOLS = {
-  XAUUSD: 'OANDA:XAUUSD',
-  XAGUSD: 'OANDA:XAGUSD',
-  BTCUSD: 'COINBASE:BTCUSD',
-  ETHUSD: 'COINBASE:ETHUSD',
-  SOLUSD: 'COINBASE:SOLUSD',
-  US30: 'CAPITALCOM:US30',
-  NAS100: 'CAPITALCOM:NAS100',
-  SPX500: 'CAPITALCOM:SPX500',
-  EURUSD: 'OANDA:EURUSD',
-  GBPUSD: 'OANDA:GBPUSD',
-  USDJPY: 'OANDA:USDJPY',
-  AUDUSD: 'OANDA:AUDUSD'
+  XAUUSD: 'OANDA:XAUUSD', XAGUSD: 'OANDA:XAGUSD', BTCUSD: 'COINBASE:BTCUSD',
+  ETHUSD: 'COINBASE:ETHUSD', SOLUSD: 'COINBASE:SOLUSD', US30: 'CAPITALCOM:US30',
+  NAS100: 'CAPITALCOM:NAS100', SPX500: 'CAPITALCOM:SPX500', EURUSD: 'OANDA:EURUSD',
+  GBPUSD: 'OANDA:GBPUSD', USDJPY: 'OANDA:USDJPY', AUDUSD: 'OANDA:AUDUSD'
 };
 const TV_INTERVALS = { '5M': '5', '15M': '15', '1H': '60', '4H': '240', '1D': 'D' };
 const NEWS_ASSETS = new Set(Object.keys(TV_SYMBOLS));
@@ -86,32 +78,74 @@ function renderTradingView() {
   script.innerHTML = JSON.stringify({ autosize: true, symbol, interval, timezone: 'Africa/Johannesburg', theme: 'dark', style: '1', locale: 'en', allow_symbol_change: false, hide_side_toolbar: false, hide_top_toolbar: false, hide_legend: false, hide_volume: false, withdateranges: true, save_image: false, calendar: false, details: false, hotlist: false, support_host: 'https://www.tradingview.com' });
   script.addEventListener('error', () => { container.innerHTML = '<div class="tv-error">TradingView chart failed to load. Refresh the page or check whether your network blocks TradingView.</div>'; setText('tvStatus', 'LOAD ERROR'); });
   widget.appendChild(script);
-  setText('tvStatus', 'LIVE FEED');
+  setText('tvStatus', 'LIVE CHART');
 }
 
 function buildMarketContext() {
   const asset = $('asset').value;
-  return { ok: true, asset, provider: 'TradingView', providerSymbol: TV_SYMBOLS[asset] || asset, timeframe: $('timeframe').value, timestamp: new Date().toISOString(), marketState: 'LIVE DISPLAY', chartAnalysis: imageReady ? 'TradingView screenshot supplied to AI' : 'No chart screenshot supplied', note: 'The embedded TradingView iframe is live, but its internal chart pixels are cross-origin and cannot be read by webpage JavaScript. Visual AI analysis uses the supplied TradingView screenshot when available.' };
+  return {
+    ok: true,
+    asset,
+    provider: 'TradingView',
+    providerSymbol: TV_SYMBOLS[asset] || asset,
+    timeframe: $('timeframe').value,
+    timestamp: new Date().toISOString(),
+    marketState: 'LIVE CHART DISPLAY',
+    chartAnalysis: imageReady ? 'TradingView screenshot supplied to AI' : 'No chart screenshot supplied',
+    note: 'The TradingView chart is displayed live. Its cross-origin iframe pixels are not readable by webpage JavaScript, so visual chart analysis uses the screenshot supplied by the user.'
+  };
 }
-async function fetchLiveMarket() { liveMarket = buildMarketContext(); renderTradingView(); return liveMarket; }
-async function fetchLiveNews() { const asset = $('asset').value; if (!NEWS_ASSETS.has(asset)) return []; const data = await fetchJson(`/api/news?asset=${encodeURIComponent(asset)}&fresh=${Date.now()}`); liveNews = data.items || []; renderMacroNews(); return liveNews; }
-async function fetchLiveCalendar() { const data = await fetchJson(`/api/calendar?fresh=${Date.now()}`); liveCalendar = data.events || []; renderCalendar(); return liveCalendar; }
-async function refreshLiveContext() { try { await fetchLiveMarket(); await Promise.all([fetchLiveNews(), fetchLiveCalendar()]); return true; } catch (error) { setText('liveSource', error.message); $('liveSource')?.classList.add('error'); return false; } }
 
-function renderMacroNews() {
-  if (!liveNews.length) { $('newsList').innerHTML = '<article class="news-item"><div class="news-top"><span>LIVE FEED</span><b>WAITING</b></div><h3>No current headlines loaded</h3><p>The news feed did not return current headlines.</p></article>'; setText('newsStatus','WAITING'); return; }
+async function loadNews() {
+  const asset = $('asset').value;
+  if (!NEWS_ASSETS.has(asset)) return [];
+  try {
+    const data = await fetchJson(`/api/news?asset=${encodeURIComponent(asset)}&fresh=${Date.now()}`);
+    liveNews = data.items || [];
+    renderMacroNews();
+    return liveNews;
+  } catch (error) {
+    liveNews = [];
+    renderMacroNews(error.message);
+    return [];
+  }
+}
+
+async function loadCalendar() {
+  try {
+    const data = await fetchJson(`/api/calendar?fresh=${Date.now()}`);
+    liveCalendar = data.events || [];
+    renderCalendar();
+    return liveCalendar;
+  } catch (error) {
+    liveCalendar = [];
+    renderCalendar(error.message);
+    return [];
+  }
+}
+
+async function refreshResearchContext() {
+  liveMarket = buildMarketContext();
+  renderTradingView();
+  await Promise.allSettled([loadNews(), loadCalendar()]);
+  return liveMarket;
+}
+
+function renderMacroNews(errorMessage = '') {
+  if (!liveNews.length) { $('newsList').innerHTML = `<article class="news-item"><div class="news-top"><span>NEWS</span><b>OPTIONAL</b></div><h3>No current headlines loaded</h3><p>${escapeHtml(errorMessage || 'News is unavailable right now. AI analysis can still run using the TradingView chart screenshot.')}</p></article>`; setText('newsStatus','OPTIONAL'); return; }
   setText('newsStatus','LIVE');
   $('newsList').innerHTML = liveNews.map(item => `<article class="news-item"><div class="news-top"><span>${escapeHtml(formatDate(item.pubDate))}</span><b>LIVE</b><em>${escapeHtml(item.source || 'News')}</em></div><h3>${escapeHtml(item.title)}</h3><p>Current headline related to ${escapeHtml($('asset').value)}. Verify the full report at the original source.</p><small>${escapeHtml(item.source || 'Market news')}</small></article>`).join('');
 }
-function renderCalendar() {
+
+function renderCalendar(errorMessage = '') {
   const filter = $('calendarFilter').value;
   const events = filter === 'all' ? liveCalendar : liveCalendar.filter(e => e.currency === filter);
-  if (!events.length) { $('calendarList').innerHTML = '<article class="calendar-item"><div class="calendar-date"><strong>LIVE FEED</strong><span>Waiting</span></div><div class="calendar-event"><h3>No current calendar events loaded</h3><p>The calendar feed could not return current events.</p></div></article>'; return; }
+  if (!events.length) { $('calendarList').innerHTML = `<article class="calendar-item"><div class="calendar-date"><strong>CALENDAR</strong><span>Optional</span></div><div class="calendar-event"><h3>No current calendar events loaded</h3><p>${escapeHtml(errorMessage || 'The calendar is unavailable right now. AI analysis can still run.')}</p></div></article>`; return; }
   $('calendarList').innerHTML = events.map(e => `<article class="calendar-item"><div class="calendar-date"><strong>${escapeHtml(formatDate(e.date))}</strong><span>${escapeHtml(e.currency || '')}</span></div><div class="calendar-event"><div><b>${escapeHtml(e.currency || '')}</b><span class="impact-high">${escapeHtml(e.impact || 'EVENT')}</span></div><h3>${escapeHtml(e.title)}</h3><p>Actual: ${escapeHtml(e.actual ?? '—')} · Forecast: ${escapeHtml(e.forecast ?? '—')} · Previous: ${escapeHtml(e.previous ?? '—')}</p></div></article>`).join('');
 }
 $('calendarFilter').addEventListener('change', renderCalendar);
-$('asset').addEventListener('change', async () => { setText('analysisMeta', `${$('asset').value} selected · updating TradingView`); await refreshLiveContext(); });
-$('timeframe').addEventListener('change', async () => { setText('analysisMeta', `${$('asset').value} · ${$('timeframe').value} selected`); renderTradingView(); liveMarket = buildMarketContext(); });
+$('asset').addEventListener('change', async () => { setText('analysisMeta', `${$('asset').value} selected · updating chart`); await refreshResearchContext(); });
+$('timeframe').addEventListener('change', () => { setText('analysisMeta', `${$('asset').value} · ${$('timeframe').value} selected`); liveMarket = buildMarketContext(); renderTradingView(); });
 
 function renderAnalysis(data) {
   const confidence = Math.max(0, Math.min(100, Number(data.confidence) || 0));
@@ -127,23 +161,45 @@ function renderAnalysis(data) {
   setText('quoteCaptured', $('timeframe').value);
   $('reasoning').innerHTML = [...(Array.isArray(data.reasoning) ? data.reasoning : []), `Chart evidence: ${data.priceContext || 'No numeric quote was invented.'}`, `Macro risk: ${data.newsRisk || 'UNKNOWN'}.`].map(x => `<li>${escapeHtml(x)}</li>`).join('');
   const warning = data.warning || ''; $('warningBox').hidden = !warning; $('warningBox').textContent = warning;
-  $('dashboard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 analyzeBtn.addEventListener('click', async () => {
   analyzeBtn.classList.add('loading'); analyzeBtn.disabled = true;
   analyzeBtn.querySelector('span').textContent = imageReady ? 'Analyzing TradingView chart…' : 'Analyzing market context…';
+  setText('analysisMeta', 'Preparing AI analysis…');
   try {
-    await refreshLiveContext();
-    const payload = { image: imageReady ? imageDataUrl : null, asset: $('asset').value, timeframe: $('timeframe').value, style: $('style').value, risk: $('risk').value, market: liveMarket, news: $('includeNews').checked ? liveNews : [], calendar: $('includeNews').checked ? liveCalendar : [] };
+    liveMarket = buildMarketContext();
+    const contextPromise = refreshResearchContext();
+    await contextPromise;
+    const payload = {
+      image: imageReady ? imageDataUrl : null,
+      asset: $('asset').value,
+      timeframe: $('timeframe').value,
+      style: $('style').value,
+      risk: $('risk').value,
+      market: liveMarket,
+      news: $('includeNews').checked ? liveNews : [],
+      calendar: $('includeNews').checked ? liveCalendar : []
+    };
     const data = await fetchJson('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     renderAnalysis(data);
   } catch (error) {
-    setText('bias','ANALYSIS UNAVAILABLE'); setText('biasReason',error.message); setText('analysisMeta','Check the connected data sources'); setText('researchSummary','No research summary was generated.'); $('reasoning').innerHTML = '<li>The TradingView chart can still be viewed directly above.</li><li>For visual candle/structure analysis, upload a screenshot from the current TradingView chart.</li>'; $('warningBox').hidden = false; $('warningBox').textContent = error.message;
-  } finally { analyzeBtn.querySelector('span').textContent = 'Analyze selected market'; analyzeBtn.disabled = false; analyzeBtn.classList.remove('loading'); }
+    setText('bias','ANALYSIS UNAVAILABLE');
+    setText('biasReason',error.message);
+    setText('analysisMeta','AI analysis failed');
+    setText('researchSummary','No research summary was generated.');
+    $('reasoning').innerHTML = '<li>Check that OPENAI_API_KEY is configured in Vercel.</li><li>For visual chart analysis, upload a screenshot from the current TradingView chart.</li><li>News and calendar feeds are optional and do not block analysis.</li>';
+    $('warningBox').hidden = false;
+    $('warningBox').textContent = error.message;
+  } finally {
+    analyzeBtn.querySelector('span').textContent = 'Analyze selected market';
+    analyzeBtn.disabled = false;
+    analyzeBtn.classList.remove('loading');
+  }
 });
 
 renderMacroNews();
 renderCalendar();
 renderTradingView();
-refreshLiveContext().catch(() => {});
+refreshResearchContext().catch(() => {});
