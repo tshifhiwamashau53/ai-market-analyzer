@@ -141,7 +141,10 @@
     const btn=byId('analyzeBtn');
     if(btn && !btn.dataset.fixedAnalysisBound){
       btn.dataset.fixedAnalysisBound='1';
-      btn.addEventListener('click',runFixedAnalysis,true);
+      btn.addEventListener('click',event=>{
+        event.stopImmediatePropagation();
+        runFixedAnalysis();
+      },true);
       window.runFixedAnalysis=runFixedAnalysis;
     }
   };
