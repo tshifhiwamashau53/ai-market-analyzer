@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta name="description" content="Local chart screenshot market analyzer with no paid AI API.">
-<title>AI Market Analyzer</title><link rel="icon" href="assets/logo.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css">
+<title>AI Market Analyzer</title><link rel="icon" href="assets/logo.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=20260914-12">
 </head>
 <body>
 <header class="topbar"><a class="brand" href="./"><img src="assets/logo.svg" alt=""><span>AI Market Analyzer</span></a><nav class="nav"><a href="#workspace">Analyze</a><a href="#results">Results</a></nav><div class="status"><span class="status-dot"></span> LOCAL SCREENSHOT ENGINE</div></header>
 <main class="container">
 <section class="hero"><div><p class="eyebrow">SCREENSHOT MARKET ANALYZER</p><h1>Upload the chart.<br><span>Get the analysis.</span></h1><p class="hero-copy">Upload a trading-chart screenshot. The browser detects candle-like structures, market direction, swing structure, rejection, possible BOS and liquidity sweeps locally. OCR reads visible price labels and uses those screenshot prices for the current price, entry, SL and TP levels. No TradingView, MT5 or paid AI API is required.</p></div><div class="hero-stats"><span>MODE</span><strong>SCREENSHOT</strong><small>LOCAL ANALYSIS + OCR</small></div></section>
 <section class="workspace" id="workspace">
-<div class="panel upload-panel"><div class="panel-title"><div><span class="step">01</span><h2>Upload chart screenshot</h2></div><span class="tag">REQUIRED</span></div><div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Upload a chart screenshot"><input id="chartInput" class="file-input" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Choose chart image"><div class="upload-icon">＋</div><strong>Drop your chart screenshot here</strong><span>PNG, JPG or WEBP. The image is processed in your browser.</span><small>Max 10 MB · Analysis starts automatically</small></div><div class="preview-wrap" id="previewWrap" hidden><img id="chartPreview" alt="Uploaded trading chart"><button type="button" class="remove-btn" id="removeImage">Remove image</button></div></div>
+<div class="panel upload-panel"><div class="panel-title"><div><span class="step">01</span><h2>Upload chart screenshot</h2></div><span class="tag">REQUIRED</span></div><div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Upload a chart screenshot"><input id="chartInput" class="file-input" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Choose a chart image"><div class="upload-icon">＋</div><strong>Drop your chart screenshot here</strong><span>PNG, JPG or WEBP. The image is processed in your browser.</span><small>Max 10 MB · Analysis starts automatically</small></div><div class="preview-wrap" id="previewWrap" hidden><img id="chartPreview" alt="Uploaded trading chart"><button type="button" class="remove-btn" id="removeImage">Remove image</button></div></div>
 <div class="panel settings-panel"><div class="panel-title"><div><span class="step">02</span><h2>Screenshot controls</h2></div><span class="tag">LOCAL</span></div><div class="field-grid"><label>Instrument<select id="asset"><option>Gold — XAUUSD</option><option>Bitcoin — BTCUSD</option><option>US30</option><option>NAS100</option><option>EURUSD</option><option>GBPUSD</option></select></label><label>Timeframe<select id="timeframe"><option>5M</option><option>15M</option><option>1H</option><option>4H</option><option>1D</option></select></label><label>Analysis style<select id="style"><option>Price Action</option><option>ICT / Liquidity</option><option>SMC</option><option>Technical Overview</option></select></label><label>Profile<select id="risk"><option>Conservative</option><option>Balanced</option><option>Aggressive</option></select></label></div><button class="analyze-btn" id="analyzeBtn" type="button"><span>Analyze uploaded chart</span><span>→</span></button></div>
 </section>
 <section class="dashboard" id="results" aria-live="polite"><div class="dashboard-head"><div><p class="eyebrow">03 / ANALYSIS RESULT</p><h2>Chart intelligence</h2></div><div class="analysis-meta" id="analysisMeta">Upload a screenshot to begin</div></div>
@@ -20,6 +20,6 @@
 <footer><span>AI Market Analyzer</span><span>Screenshot-only local analysis · Educational and research use.</span></footer>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="script.js?v=20260914-11"></script>
-<script src="ocr.js?v=20260914-11"></script>
+<script src="script.js?v=20260914-12"></script>
+<script src="ocr.js?v=20260914-12"></script>
 </body></html>
