@@ -42,6 +42,7 @@ $('removeImage').addEventListener('click', () => {
   $('livePrice').textContent = '—';
   $('liveChange').textContent = '—';
   $('liveUpdated').textContent = 'Waiting for live quote…';
+  $('liveSource').textContent = 'Live quote will be fetched when you analyze.';
 });
 
 function formatPrice(value) {
@@ -59,49 +60,63 @@ function formatDate(value) {
   return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-async function fetchJson(url) {
-  const response = await fetch(url, { cache: 'no-store' });
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, { cache: 'no-store', ...options });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
   return data;
 }
 
-async function fetchLiveMarket() {
+async function fetchLiveMarket({ requiredFresh = false } = {}) {
   const asset = $('asset').value;
-  const data = await fetchJson(`/api/market?asset=${encodeURIComponent(asset)}`);
-  liveMarket = data;
+  // Cache-buster makes every Analyze click request a new server-side quote.
+  const data = await fetchJson(`/api/market?asset=${encodeURIComponent(asset)}&fresh=${Date.now()}`);
+  const capturedAt = new Date(data.timestamp).getTime();
+  const ageSeconds = (Date.now() - capturedAt) / 1000;
+
+  if (!Number.isFinite(data.price) || data.price <= 0) throw new Error('The market provider returned an invalid price.');
+  if (!Number.isFinite(capturedAt) || ageSeconds < -10 || ageSeconds > 90) {
+    throw new Error(`LIVE PRICE UNAVAILABLE: quote is stale (${Math.max(0, Math.round(ageSeconds))}s old).`);
+  }
+
+  liveMarket = { ...data, clientCapturedAt: new Date().toISOString(), clientAgeSeconds: Math.max(0, Math.round(ageSeconds)) };
   $('liveAsset').textContent = asset;
   $('livePrice').textContent = formatPrice(data.price);
-  const sign = data.change >= 0 ? '+' : '';
+  const sign = Number(data.change) >= 0 ? '+' : '';
   $('liveChange').textContent = `${sign}${Number(data.changePct || 0).toFixed(2)}%`;
-  $('liveUpdated').textContent = `Updated ${formatDate(data.timestamp)}`;
-  $('liveSource').textContent = `${data.exchange || 'Market feed'} · ${data.note}`;
+  $('liveUpdated').textContent = `Captured ${formatDate(data.timestamp)} · ${liveMarket.clientAgeSeconds}s old`;
+  $('liveSource').textContent = `${data.provider || data.exchange || 'Market feed'} · ${data.note || 'Live reference quote.'}`;
   $('liveSource').classList.remove('error');
-  return data;
+  return liveMarket;
 }
 
 async function fetchLiveNews() {
-  const data = await fetchJson(`/api/news?asset=${encodeURIComponent($('asset').value)}`);
+  const data = await fetchJson(`/api/news?asset=${encodeURIComponent($('asset').value)}&fresh=${Date.now()}`);
   liveNews = data.items || [];
   renderMacroNews();
   return liveNews;
 }
 
 async function fetchLiveCalendar() {
-  const data = await fetchJson('/api/calendar');
+  const data = await fetchJson(`/api/calendar?fresh=${Date.now()}`);
   liveCalendar = data.events || [];
   renderCalendar();
   return liveCalendar;
 }
 
-async function refreshLiveContext() {
-  $('liveSource').textContent = 'Fetching current market quote…';
+async function refreshLiveContext({ requireFreshMarket = false } = {}) {
+  $('liveSource').textContent = 'Fetching a fresh current market quote…';
   $('liveSource').classList.remove('error');
   try {
-    await Promise.all([fetchLiveMarket(), fetchLiveNews(), fetchLiveCalendar()]);
+    await fetchLiveMarket({ requiredFresh: requireFreshMarket });
+    await Promise.all([fetchLiveNews(), fetchLiveCalendar()]);
+    return true;
   } catch (error) {
-    $('liveSource').textContent = `Live backend unavailable: ${error.message}`;
+    liveMarket = null;
+    $('liveSource').textContent = error.message;
     $('liveSource').classList.add('error');
+    if (requireFreshMarket) throw error;
+    return false;
   }
 }
 
@@ -143,7 +158,7 @@ function renderAnalysis(data) {
   setText('rr3', data.rr3 || '—');
   setText('confidence', confidence);
   $('confidenceBar').style.width = `${confidence}%`;
-  setText('entryNote', liveMarket ? `${$('asset').value} · ${$('timeframe').value} · live reference ${formatPrice(liveMarket.price)}` : 'Live price unavailable.');
+  setText('entryNote', liveMarket ? `${$('asset').value} · ${$('timeframe').value} · live reference ${formatPrice(liveMarket.price)} · captured ${formatDate(liveMarket.timestamp)}` : 'Live price unavailable.');
   setText('analysisMeta', `${$('asset').value} · ${$('timeframe').value} · ${formatDate(data.analyzedAt)}`);
   $('reasoning').innerHTML = [
     ...(Array.isArray(data.reasoning) ? data.reasoning : []),
@@ -158,10 +173,13 @@ analyzeBtn.addEventListener('click', async () => {
   if (!imageReady) { alert('Upload a chart screenshot first.'); return; }
   analyzeBtn.classList.add('loading');
   analyzeBtn.disabled = true;
-  analyzeBtn.querySelector('span').textContent = 'Reading live market + chart…';
+  analyzeBtn.querySelector('span').textContent = 'Reading fresh live market + chart…';
 
   try {
-    await refreshLiveContext();
+    // This is deliberately mandatory. No stale quote, demo price or hard-coded fallback.
+    await refreshLiveContext({ requireFreshMarket: true });
+    if (!liveMarket) throw new Error('LIVE PRICE UNAVAILABLE');
+
     const payload = {
       image: imageDataUrl,
       asset: $('asset').value,
@@ -172,20 +190,25 @@ analyzeBtn.addEventListener('click', async () => {
       news: $('includeNews').checked ? liveNews : [],
       calendar: $('includeNews').checked ? liveCalendar : []
     };
-    const response = await fetch('/api/analyze', {
+
+    const data = await fetchJson('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Analysis failed');
     renderAnalysis(data);
     $('dashboard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (error) {
+    liveMarket = null;
     setText('bias', 'NO TRADE');
-    setText('biasReason', `Analysis could not run: ${error.message}`);
-    setText('analysisMeta', 'Backend connection required');
-    $('reasoning').innerHTML = '<li>The screenshot was loaded, but the live AI backend did not return an analysis.</li><li>Deploy the repository with the required backend environment variables.</li><li>No demo price or fake setup is shown anymore.</li>';
+    setText('biasReason', error.message);
+    setText('entry', '—');
+    setText('sl', '—');
+    setText('tp1', '—');
+    setText('tp2', '—');
+    setText('tp3', '—');
+    setText('analysisMeta', 'Analysis blocked — fresh live price required');
+    $('reasoning').innerHTML = '<li>No trading setup was generated.</li><li>A fresh live market quote could not be verified at the moment Analyze was pressed.</li><li>The app will not substitute an old, cached or demo price.</li>';
   } finally {
     analyzeBtn.querySelector('span').textContent = 'Analyze market';
     analyzeBtn.disabled = false;
