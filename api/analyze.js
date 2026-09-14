@@ -16,7 +16,6 @@ export default async function handler(req, res) {
     const { image, asset, timeframe, style, risk, market, news, calendar } = body;
     const selectedAsset = String(asset || '').toUpperCase();
     const hasImage = typeof image === 'string' && image.startsWith('data:image/');
-
     if (!selectedAsset) return res.status(400).json({ error: 'An asset is required.' });
     if (!market || String(market.asset || '').toUpperCase() !== selectedAsset) return res.status(400).json({ error: 'Market context for the selected asset is required.' });
 
@@ -24,10 +23,11 @@ export default async function handler(req, res) {
     const hasNumericPrice = Number.isFinite(price) && price > 0;
     const quoteTime = new Date(market.timestamp).getTime();
     const hasTimestamp = Number.isFinite(quoteTime);
+    const hasMachineData = Boolean(market.dataAvailable && Array.isArray(market.candles) && market.candles.length >= 50);
 
-    const systemPrompt = `You are the research engine for an educational market-intelligence application. ${hasNumericPrice ? 'Use the supplied current market price as context.' : 'The embedded TradingView chart is the live market display, but its exact quote is not exposed to page JavaScript. Never invent or estimate a numeric current price.'} ${hasImage ? 'Analyze the supplied chart screenshot for visible structure and explain only what is actually visible.' : 'No chart image was supplied, so do not pretend to see chart patterns; use only the supplied market context and macro information.'} Return ONLY valid JSON with this exact shape: {"bias":"BULLISH|BEARISH|NEUTRAL|NO TRADE","confidence":0,"reason":"","reasoning":["","",""],"summary":"","priceContext":"","newsRisk":"LOW|MEDIUM|HIGH","warning":""}. Confidence must be 0-100. Keep the response informational and research-oriented. Do not provide order instructions, entry prices, stop-losses, take-profit targets, position sizing, or guarantees. Never invent a price or chart feature. If evidence is insufficient, use NO TRADE or NEUTRAL and explain why.`;
+    const systemPrompt = `You are the research engine for an educational market-intelligence application. ${hasNumericPrice ? 'Use the supplied current market price as factual context.' : 'There is no verified numeric price; never invent one.'} ${hasMachineData ? 'Use the supplied OHLC candles and calculated indicators to assess trend, momentum, volatility and recent support/resistance.' : 'No machine-readable OHLC feed is available for this instrument, so do not pretend you have automatic chart data.'} ${hasImage ? 'You may also analyze the supplied chart screenshot, but describe only features actually visible in it.' : 'No chart screenshot was supplied, so do not claim to see visual chart patterns.'} Return ONLY valid JSON with this exact shape: {"bias":"BULLISH|BEARISH|NEUTRAL|NO TRADE","confidence":0,"reason":"","reasoning":["","",""],"summary":"","priceContext":"","newsRisk":"LOW|MEDIUM|HIGH","warning":""}. Confidence must be 0-100. This is research/education only. Do not provide order instructions, exact entries, stop-losses, take-profit targets, position sizing, or guarantees. Never invent prices, candles, indicators, news or chart features. If evidence conflicts or is insufficient, use NEUTRAL or NO TRADE. Explain the evidence clearly.`;
 
-    const userPrompt = `Asset: ${asset}\nTimeframe: ${timeframe}\nAnalysis style: ${style}\nResearch profile: ${risk}\nChart supplied: ${hasImage ? 'YES' : 'NO'}\n\nMARKET CONTEXT:\n${JSON.stringify(market, null, 2)}\n\nCURRENT MACRO NEWS:\n${JSON.stringify(news || [], null, 2)}\n\nECONOMIC CALENDAR:\n${JSON.stringify(calendar || [], null, 2)}\n\nProvide a concise research summary. ${hasImage ? 'Describe only visible chart evidence and compare it with the supplied market context.' : 'Focus on the selected asset, macro conditions, market-data availability and what additional chart evidence would be useful.'}`;
+    const userPrompt = `Asset: ${asset}\nTimeframe: ${timeframe}\nAnalysis style: ${style}\nResearch profile: ${risk}\nChart supplied: ${hasImage ? 'YES' : 'NO'}\nMachine-readable market data: ${hasMachineData ? 'YES' : 'NO'}\n\nMARKET CONTEXT:\n${JSON.stringify(market, null, 2)}\n\nCURRENT MACRO NEWS:\n${JSON.stringify(news || [], null, 2)}\n\nECONOMIC CALENDAR:\n${JSON.stringify(calendar || [], null, 2)}\n\nAnalyze the selected market now. Summarize the directional bias, confidence, trend/momentum evidence, volatility, recent support/resistance context, and important macro risks. ${hasMachineData ? 'Use the supplied indicators and candle history as the primary machine-readable technical evidence.' : 'State that automatic technical data is unavailable rather than inventing it.'}`;
 
     const userContent = [{ type: 'input_text', text: userPrompt }];
     if (hasImage) userContent.push({ type: 'input_image', image_url: image });
@@ -37,11 +37,8 @@ export default async function handler(req, res) {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL || 'gpt-5.6-luna',
-        input: [
-          { role: 'system', content: [{ type: 'input_text', text: systemPrompt }] },
-          { role: 'user', content: userContent }
-        ],
-        max_output_tokens: 900
+        input: [{ role: 'system', content: [{ type: 'input_text', text: systemPrompt }] }, { role: 'user', content: userContent }],
+        max_output_tokens: 1100
       })
     });
 
@@ -52,6 +49,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       ...result,
       chartUsed: hasImage,
+      machineDataUsed: hasMachineData,
       model: process.env.OPENAI_MODEL || 'gpt-5.6-luna',
       analyzedAt: new Date().toISOString(),
       livePriceUsed: hasNumericPrice ? price : null,
