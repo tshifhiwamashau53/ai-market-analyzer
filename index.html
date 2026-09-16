@@ -3,85 +3,48 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta name="description" content="Simple screenshot chart analyzer.">
-<title>AI Market Analyzer</title>
-<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
-<link rel="stylesheet" href="style.css?v=20260916-04">
+<meta name="description" content="Simple screenshot chart setup analyzer.">
+<title>Chart Setup Analyzer</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f2f4f6;color:#182127;font-family:Inter,Arial,sans-serif}.wrap{max-width:1050px;margin:auto;padding:22px 16px 50px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}.brand{font-weight:800;font-size:20px}.status{font-size:12px;color:#68747d}.box{background:#fff;border:1px solid #dfe4e8;border-radius:18px;padding:20px;box-shadow:0 8px 28px rgba(20,30,40,.06);margin-bottom:18px}.upload{min-height:190px;display:flex;align-items:center;justify-content:center;text-align:center;border:2px dashed #cbd3d9;border-radius:14px;background:#fafbfc;cursor:pointer}.upload strong{display:block;font-size:18px}.upload span{display:block;color:#7a858d;margin-top:8px;font-size:14px}.file-input{display:none}.preview img{width:100%;display:block;border-radius:12px}.actions{display:flex;gap:10px;margin-top:12px}.btn{border:0;border-radius:11px;padding:12px 18px;font-weight:700;cursor:pointer}.primary{background:#182127;color:white}.secondary{background:#e9edf0;color:#182127}.analyze{width:100%;font-size:17px;margin-top:14px}.result{display:none}.signal{font-size:42px;font-weight:900;letter-spacing:-1px}.answer{font-size:17px;margin:7px 0 0;color:#4f5b63}.canvas-wrap{margin-top:18px}.canvas-wrap canvas{width:100%;height:auto;display:block;border-radius:12px;background:#fff}.save{margin-top:12px;width:100%}.note{font-size:12px;color:#77828a;text-align:center;margin-top:12px}@media(max-width:600px){.wrap{padding:14px 10px 35px}.box{padding:14px;border-radius:14px}.signal{font-size:34px}}
+</style>
 </head>
 <body>
-<header class="topbar">
-  <a class="brand" href="./"><img src="assets/logo.svg" alt=""><span>AI Market Analyzer</span></a>
-  <div class="status"><span class="status-dot"></span><span id="engineStatus">READY</span></div>
-</header>
-<main class="container">
-<section class="hero">
-  <div>
-    <p class="eyebrow">CHART ANALYZER</p>
-    <h1>Upload a chart.<br><span>Get the setup.</span></h1>
-    <p class="hero-copy">Upload one screenshot. The analyzer reads the visible chart and draws BUY or SELL, entry, SL and TP directly on it.</p>
-  </div>
-</section>
-<section class="workspace" id="workspace">
-  <div class="panel upload-panel">
-    <div class="panel-title"><div><span class="step">01</span><h2>Insert chart</h2></div><span class="tag">PNG / JPG</span></div>
-    <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Upload a chart screenshot">
-      <input id="chartInput" class="file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp" aria-label="Choose a chart image">
-      <div class="upload-icon">＋</div><strong>Tap to upload your screenshot</strong><span>Or drag the picture here</span>
+<div class="wrap">
+  <header class="top"><div class="brand">Chart Setup Analyzer</div><div class="status">SCREENSHOT ONLY</div></header>
+
+  <section class="box">
+    <label class="upload" id="dropzone">
+      <input id="chartInput" class="file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp">
+      <div><strong>Tap to insert your chart</strong><span>PNG, JPG or WEBP</span></div>
+    </label>
+    <div class="preview" id="previewWrap" hidden>
+      <img id="chartPreview" alt="Uploaded chart">
+      <div class="actions"><button class="btn secondary" id="removeImage" type="button">Remove</button><button class="btn secondary" id="saveOriginal" type="button">Save original</button></div>
     </div>
-    <div class="preview-wrap" id="previewWrap" hidden>
-      <img id="chartPreview" alt="Uploaded trading chart">
-      <div class="preview-actions"><button type="button" class="remove-btn" id="removeImage">Remove</button><button type="button" class="save-btn" id="saveOriginal">Save original</button></div>
-    </div>
-  </div>
-  <div class="panel settings-panel">
-    <div class="panel-title"><div><span class="step">02</span><h2>Analyze</h2></div><span class="tag">AUTOMATIC</span></div>
-    <div class="field-grid">
-      <label>Instrument<select id="asset"><option>Gold — XAUUSD</option><option>Bitcoin — BTCUSD</option><option>US30</option><option>NAS100</option><option>EURUSD</option><option>GBPUSD</option><option>Other</option></select></label>
-      <label>Timeframe<select id="timeframe"><option>1M</option><option>3M</option><option selected>5M</option><option>15M</option><option>30M</option><option>1H</option><option>4H</option><option>1D</option></select></label>
-      <label>Analysis style<select id="style"><option>Price Action</option><option>ICT / Liquidity</option><option>SMC</option><option>Technical Overview</option></select></label>
-      <label>Trading mode<select id="risk"><option>Scalping</option><option>Intraday</option><option>Conservative</option></select></label>
-    </div>
-    <button class="analyze-btn" id="analyzeBtn" type="button"><span>Analyze chart</span><span>→</span></button>
-    <p class="tool-note">No price reading. No numbers are invented.</p>
-  </div>
-</section>
-<section class="dashboard" id="results" aria-live="polite">
-  <div class="dashboard-head"><div><p class="eyebrow">RESULT</p><h2>Your setup</h2></div><div class="analysis-meta" id="analysisMeta">Waiting for chart</div></div>
-  <div class="result-grid">
-    <article class="result-card bias-card"><div class="card-label">SIGNAL</div><div class="bias" id="bias">WAIT</div><p id="biasReason">Upload a chart to find a setup.</p></article>
-    <article class="result-card"><div class="card-label">PRICE</div><div class="level">OFF</div><p id="currentPriceNote">Market-price detection is off.</p></article>
-    <article class="result-card"><div class="card-label">READ QUALITY</div><div class="confidence"><span id="confidence">—</span><small>%</small></div><div class="meter"><span id="confidenceBar"></span></div><p>Visual read quality.</p></article>
-  </div>
-  <div class="levels-grid">
-    <article class="panel targets-panel"><div class="panel-title"><div><span class="step">03</span><h2>Levels</h2></div><span class="tag">ON CHART</span></div><div class="context-stack"><div><span>Entry</span><strong id="entryLevel">—</strong></div><div><span>Stop loss</span><strong id="stopLossLevel">—</strong></div><div><span>TP1</span><strong id="tp1Level">—</strong></div><div><span>TP2</span><strong id="tp2Level">—</strong></div><div><span>TP3</span><strong id="tp3Level">—</strong></div></div></article>
-    <article class="panel reasoning-panel"><div class="panel-title"><div><span class="step">04</span><h2>Why</h2></div></div><ul id="reasoning"><li>Waiting for screenshot analysis.</li></ul></article>
-  </div>
-  <article class="panel summary-panel"><div class="panel-title"><div><span class="step">05</span><h2>Simple answer</h2></div></div><p id="researchSummary">Upload the chart. The result will be drawn on the image.</p><div class="warning-box" id="warningBox" hidden></div></article>
-  <section class="panel annotated-panel" id="annotatedPanel" hidden>
-    <div class="panel-title"><div><span class="step">06</span><h2>Annotated chart</h2></div><span class="tag">BUY / SELL</span></div>
-    <p class="annotated-note">The original screenshot is returned with the setup drawn inside the chart. The right price scale is left untouched.</p>
-    <canvas id="annotationCanvas"></canvas>
-    <div class="annotation-actions"><button class="save-btn" id="saveAnnotated" type="button">Save result</button></div>
+    <button class="btn primary analyze" id="analyzeBtn" type="button">Analyze chart</button>
+    <div class="note">No market-price reading. No price numbers are invented.</div>
   </section>
-  <section class="pro-analysis" id="proAnalysis">
-    <div class="pro-head"><div><span class="pro-kicker">DETAILS</span><h2>Pattern &amp; market structure</h2></div></div>
-    <div class="pro-grid">
-      <article class="pro-card"><span>MARKET STRUCTURE</span><strong id="proStructure">—</strong><p id="proStructureText">Waiting for chart.</p></article>
-      <article class="pro-card"><span>PRIMARY PATTERN</span><strong id="proPattern">—</strong><p id="proPatternText">Waiting for chart.</p></article>
-      <article class="pro-card"><span>BREAK OF STRUCTURE</span><strong id="proBos">—</strong><p>Image-based structural read.</p></article>
-      <article class="pro-card"><span>READ QUALITY</span><strong id="proQuality">—</strong><p>Visual read quality.</p></article>
+
+  <section class="box result" id="results" aria-live="polite">
+    <div id="analysisMeta" class="status">SETUP</div>
+    <div id="bias" class="signal">WAIT</div>
+    <p id="biasReason" class="answer">Insert a screenshot.</p>
+    <div class="canvas-wrap" id="annotatedPanel" hidden>
+      <canvas id="annotationCanvas"></canvas>
+      <button class="btn primary save" id="saveAnnotated" type="button">Save setup picture</button>
     </div>
-    <div class="pro-grid pro-wide"><article class="pro-card"><span>SMART MONEY CONCEPTS</span><div id="proSMC" class="pro-list">Waiting for analysis.</div></article><article class="pro-card"><span>KEY AREAS</span><div id="proAreas" class="pro-list">Waiting for analysis.</div></article></div>
+    <span id="entryLevel" hidden></span><span id="stopLossLevel" hidden></span><span id="tp1Level" hidden></span><span id="tp2Level" hidden></span><span id="tp3Level" hidden></span>
+    <span id="currentPriceNote" hidden></span><span id="sourceNote" hidden></span><span id="researchSummary" hidden></span><ul id="reasoning" hidden></ul>
+    <span id="confidence" hidden></span><span id="confidenceBar" hidden></span><section id="proAnalysis" hidden></section>
   </section>
-</section>
-<footer><span>AI Market Analyzer</span><span>Screenshot analysis only.</span></footer>
-</main>
-<script src="script.js?v=20260916-04"></script>
-<script src="ocr.js?v=20260916-04"></script>
-<script src="persistence.js?v=20260916-04"></script>
-<script src="upload-fix.js?v=20260916-04"></script>
-<script src="chart-analyzer-pro.js?v=20260916-04"></script>
-<script src="annotate.js?v=20260916-04"></script>
-<script src="scalp-engine.js?v=20260916-01"></script>
+</div>
+<script src="script.js?v=20260916-05"></script>
+<script src="scalp-engine.js?v=20260916-05"></script>
+<script>
+const results=document.getElementById('results');
+const oldRun=window.runScreenshotAnalysis;
+window.runScreenshotAnalysis=function(){results.style.display='block';oldRun&&oldRun();setTimeout(()=>results.scrollIntoView({behavior:'smooth',block:'start'}),80)};
+</script>
 </body>
 </html>
