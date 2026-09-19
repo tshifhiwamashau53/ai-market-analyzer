@@ -18,8 +18,8 @@
       <input id="chartInput" class="file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp">
       <div><strong>Tap to insert your chart</strong><span>PNG, JPG or WEBP</span></div>
     </label>
-    <div class="preview" id="previewWrap" hidden>
-      <img id="chartPreview" alt="Uploaded chart">
+    <div class="preview" id="previewWrap" hidden aria-live="polite">
+      <img id="chartPreview" alt="Uploaded chart" decoding="async">
       <div class="actions"><button class="btn secondary" id="removeImage" type="button">Remove</button><button class="btn secondary" id="saveOriginal" type="button">Save original</button></div>
     </div>
     <button class="btn primary analyze" id="analyzeBtn" type="button">Analyze chart</button>
@@ -39,13 +39,9 @@
     <span id="confidence" hidden></span><span id="confidenceBar" hidden></span><section id="proAnalysis" hidden></section>
   </section>
 </div>
-<script src="script.js?v=20260916-05"></script>
-<script src="scalp-engine.js?v=20260916-05"></script>
-<script src="accumulation-vp-strategy.js?v=20260919-01"></script>
-<script>
-const results=document.getElementById('results');
-const oldRun=window.runScreenshotAnalysis;
-window.runScreenshotAnalysis=function(){results.style.display='block';oldRun&&oldRun();setTimeout(()=>results.scrollIntoView({behavior:'smooth',block:'start'}),80)};
-</script>
+<script src="script.js?v=20260919-02" defer></script>
+<script src="scalp-engine.js?v=20260919-02" defer></script>
+<script src="accumulation-vp-strategy.js?v=20260919-02" defer></script>
+
 </body>
 </html>
