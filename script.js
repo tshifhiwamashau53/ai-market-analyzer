@@ -7,15 +7,51 @@ const status=t=>setText('analysisMeta',t);
 
 function showPreview(file){
   if(!file)return;
-  if(!file.type?.startsWith('image/'))return alert('Please select a PNG, JPG or WEBP chart screenshot.');
-  if(file.size>10*1024*1024)return alert('Please choose an image smaller than 10 MB.');
-  const r=new FileReader();
-  r.onload=()=>{
-    preview.onload=async()=>{imageReady=true;previewWrap.hidden=false;dropzone.hidden=true;status(`${file.name} · screenshot loaded`);localVisual=analyzeChartImage(preview);setTimeout(runScreenshotAnalysis,100)};
-    preview.onerror=()=>alert('The image could not be read.');
-    preview.src=r.result;
+  if(!file.type || !file.type.startsWith('image/')){
+    alert('Please select a PNG, JPG, WEBP or other image chart screenshot.');
+    return;
+  }
+  if(file.size>15*1024*1024){
+    alert('Please choose an image smaller than 15 MB.');
+    return;
+  }
+
+  imageReady=false;
+  localVisual=null;
+  previewWrap.hidden=false;
+  dropzone.hidden=true;
+  status('Loading chart screenshot…');
+
+  // Show the selected image immediately with an object URL.
+  const objectUrl=URL.createObjectURL(file);
+  preview.onload=()=>{
+    URL.revokeObjectURL(objectUrl);
+    imageReady=true;
+    previewWrap.hidden=false;
+    dropzone.hidden=true;
+    status(file.name+' · screenshot loaded');
+    try{localVisual=analyzeChartImage(preview);}catch(e){console.error(e);}
+    setTimeout(()=>{if(imageReady)runScreenshotAnalysis();},150);
   };
-  r.readAsDataURL(file);
+  preview.onerror=()=>{
+    URL.revokeObjectURL(objectUrl);
+    // Fall back to FileReader for browsers that reject the object URL.
+    const r=new FileReader();
+    r.onload=()=>{
+      preview.onload=()=>{
+        imageReady=true;
+        previewWrap.hidden=false;
+        dropzone.hidden=true;
+        status(file.name+' · screenshot loaded');
+        try{localVisual=analyzeChartImage(preview);}catch(e){console.error(e);}
+        setTimeout(()=>{if(imageReady)runScreenshotAnalysis();},150);
+      };
+      preview.onerror=()=>alert('The image could not be displayed. Please try another screenshot.');
+      preview.src=r.result;
+    };
+    r.readAsDataURL(file);
+  };
+  preview.src=objectUrl;
 }
 input.addEventListener('change',e=>showPreview(e.target.files?.[0]));
 dropzone.addEventListener('click',e=>{if(e.target!==input)input.click()});
