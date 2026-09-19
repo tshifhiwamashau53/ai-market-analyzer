@@ -7,7 +7,10 @@ const status=t=>setText('analysisMeta',t);
 
 function showPreview(file){
   if(!file)return;
-  if(!file.type || !file.type.startsWith('image/')){
+  const type=(file.type||'').toLowerCase();
+  const name=(file.name||'').toLowerCase();
+  const isImage=type.startsWith('image/') || /\\.(png|jpe?g|webp|gif|bmp)$/i.test(name);
+  if(!isImage){
     alert('Please select a PNG, JPG, WEBP or other image chart screenshot.');
     return;
   }
@@ -18,40 +21,50 @@ function showPreview(file){
 
   imageReady=false;
   localVisual=null;
-  previewWrap.hidden=false;
-  dropzone.hidden=true;
   status('Loading chart screenshot…');
 
-  // Show the selected image immediately with an object URL.
-  const objectUrl=URL.createObjectURL(file);
-  preview.onload=()=>{
-    URL.revokeObjectURL(objectUrl);
-    imageReady=true;
-    previewWrap.hidden=false;
-    dropzone.hidden=true;
-    status(file.name+' · screenshot loaded');
-    try{localVisual=analyzeChartImage(preview);}catch(e){console.error(e);}
-    setTimeout(()=>{if(imageReady)runScreenshotAnalysis();},150);
+  // Use FileReader directly. This is more reliable on iPhone/Safari and GitHub Pages
+  // than relying on a temporary blob URL.
+  const reader=new FileReader();
+
+  reader.onerror=()=>{
+    previewWrap.hidden=true;
+    dropzone.hidden=false;
+    alert('The image could not be loaded. Please choose the screenshot again.');
   };
-  preview.onerror=()=>{
-    URL.revokeObjectURL(objectUrl);
-    // Fall back to FileReader for browsers that reject the object URL.
-    const r=new FileReader();
-    r.onload=()=>{
-      preview.onload=()=>{
-        imageReady=true;
-        previewWrap.hidden=false;
-        dropzone.hidden=true;
-        status(file.name+' · screenshot loaded');
-        try{localVisual=analyzeChartImage(preview);}catch(e){console.error(e);}
-        setTimeout(()=>{if(imageReady)runScreenshotAnalysis();},150);
-      };
-      preview.onerror=()=>alert('The image could not be displayed. Please try another screenshot.');
-      preview.src=r.result;
+
+  reader.onload=()=>{
+    preview.onload=()=>{
+      imageReady=true;
+      previewWrap.hidden=false;
+      dropzone.hidden=true;
+      preview.style.display='block';
+      preview.style.visibility='visible';
+      status(file.name+' · screenshot loaded');
+
+      try{
+        localVisual=analyzeChartImage(preview);
+      }catch(e){
+        console.error('Chart image analysis error:',e);
+        localVisual={available:false};
+      }
+
+      setTimeout(()=>{
+        if(imageReady)runScreenshotAnalysis();
+      },150);
     };
-    r.readAsDataURL(file);
+
+    preview.onerror=()=>{
+      imageReady=false;
+      previewWrap.hidden=true;
+      dropzone.hidden=false;
+      alert('The image could not be displayed. Please try another screenshot.');
+    };
+
+    preview.src=reader.result;
   };
-  preview.src=objectUrl;
+
+  reader.readAsDataURL(file);
 }
 input.addEventListener('change',e=>showPreview(e.target.files?.[0]));
 dropzone.addEventListener('click',e=>{if(e.target!==input)input.click()});
