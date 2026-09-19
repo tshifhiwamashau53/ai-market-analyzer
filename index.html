@@ -6,7 +6,7 @@
 <meta name="description" content="Simple screenshot chart setup analyzer.">
 <title>Chart Setup Analyzer</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f2f4f6;color:#182127;font-family:Inter,Arial,sans-serif}.wrap{max-width:1050px;margin:auto;padding:22px 16px 50px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}.brand{font-weight:800;font-size:20px}.status{font-size:12px;color:#68747d}.box{background:#fff;border:1px solid #dfe4e8;border-radius:18px;padding:20px;box-shadow:0 8px 28px rgba(20,30,40,.06);margin-bottom:18px}.upload{min-height:190px;display:flex;align-items:center;justify-content:center;text-align:center;border:2px dashed #cbd3d9;border-radius:14px;background:#fafbfc;cursor:pointer}.upload strong{display:block;font-size:18px}.upload span{display:block;color:#7a858d;margin-top:8px;font-size:14px}.file-input{display:none}.preview img{width:100%;display:block;border-radius:12px}.actions{display:flex;gap:10px;margin-top:12px}.btn{border:0;border-radius:11px;padding:12px 18px;font-weight:700;cursor:pointer}.primary{background:#182127;color:white}.secondary{background:#e9edf0;color:#182127}.analyze{width:100%;font-size:17px;margin-top:14px}.result{display:none}.signal{font-size:42px;font-weight:900;letter-spacing:-1px}.answer{font-size:17px;margin:7px 0 0;color:#4f5b63}.canvas-wrap{margin-top:18px}.canvas-wrap canvas{width:100%;height:auto;display:block;border-radius:12px;background:#fff}.save{margin-top:12px;width:100%}.note{font-size:12px;color:#77828a;text-align:center;margin-top:12px}@media(max-width:600px){.wrap{padding:14px 10px 35px}.box{padding:14px;border-radius:14px}.signal{font-size:34px}}
+*{box-sizing:border-box}body{margin:0;background:#f2f4f6;color:#182127;font-family:Inter,Arial,sans-serif}.wrap{max-width:1050px;margin:auto;padding:22px 16px 50px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}.brand{font-weight:800;font-size:20px}.status{font-size:12px;color:#68747d}.box{background:#fff;border:1px solid #dfe4e8;border-radius:18px;padding:20px;box-shadow:0 8px 28px rgba(20,30,40,.06);margin-bottom:18px}.upload{min-height:190px;display:flex;align-items:center;justify-content:center;text-align:center;border:2px dashed #cbd3d9;border-radius:14px;background:#fafbfc;cursor:pointer}.upload strong{display:block;font-size:18px}.upload span{display:block;color:#7a858d;margin-top:8px;font-size:14px}.file-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:5}.preview img{width:100%;display:block;border-radius:12px}.actions{display:flex;gap:10px;margin-top:12px}.btn{border:0;border-radius:11px;padding:12px 18px;font-weight:700;cursor:pointer}.primary{background:#182127;color:white}.secondary{background:#e9edf0;color:#182127}.analyze{width:100%;font-size:17px;margin-top:14px}.result{display:none}.signal{font-size:42px;font-weight:900;letter-spacing:-1px}.answer{font-size:17px;margin:7px 0 0;color:#4f5b63}.canvas-wrap{margin-top:18px}.canvas-wrap canvas{width:100%;height:auto;display:block;border-radius:12px;background:#fff}.save{margin-top:12px;width:100%}.note{font-size:12px;color:#77828a;text-align:center;margin-top:12px}@media(max-width:600px){.wrap{padding:14px 10px 35px}.box{padding:14px;border-radius:14px}.signal{font-size:34px}}
 </style>
 </head>
 <body>
@@ -15,7 +15,7 @@
 
   <section class="box">
     <label class="upload" id="dropzone">
-      <input id="chartInput" class="file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp">
+      <input id="chartInput" class="file-input" type="file" accept="image/*">
       <div><strong>Tap to insert your chart</strong><span>PNG, JPG or WEBP</span></div>
     </label>
     <div class="preview" id="previewWrap" hidden aria-live="polite">
@@ -39,9 +39,9 @@
     <span id="confidence" hidden></span><span id="confidenceBar" hidden></span><section id="proAnalysis" hidden></section>
   </section>
 </div>
-<script src="script.js?v=20260919-02" defer></script>
-<script src="scalp-engine.js?v=20260919-02" defer></script>
-<script src="accumulation-vp-strategy.js?v=20260919-02" defer></script>
+<script src="script.js?v=20260919-03" defer></script>
+<script src="scalp-engine.js?v=20260919-03" defer></script>
+<script src="accumulation-vp-strategy.js?v=20260919-03" defer></script>
 
 </body>
 </html>
