@@ -108,10 +108,10 @@
       </article>
     </div>
 
-    <article class="panel strategy-panel">
-      <div class="panel-head"><div><span class="eyebrow">ACCUMULATION → VP → BREAKOUT</span><h3>Setup sequence</h3></div><span class="pill" id="setupState">WAITING</span></div>
+    <article class="panel strategy-panel"><div class="panel-head"><div><span class="eyebrow">PRICE ACTION</span><h3>Candle & structure reading</h3></div><span class="pill">TECHNICAL</span></div><div class="context-grid"><div><span>ACTION</span><b id="actionState">WAIT</b></div><div><span>LAST CANDLE</span><b id="lastCandle">—</b></div><div><span>PREVIOUS</span><b id="previousCandle">—</b></div><div><span>ENTRY PLAN</span><b id="entryPlan">Wait for AI analysis</b></div></div><p id="actionReason" class="muted">The local engine reads OHLC candles; OpenAI will provide deeper reasoning and fundamentals when configured.</p></article><article class="panel strategy-panel">
+      <div class="panel-head"><div><span class="eyebrow">TECHNICAL ANALYSIS</span><h3>Market structure & price action</h3></div><span class="pill" id="setupState">WAITING</span></div>
       <div class="stage-flow" id="stageFlow">
-        <div><b>01</b><span>ACCUMULATION</span><strong>—</strong></div><div><b>02</b><span>VOLUME PROFILE</span><strong>—</strong></div><div><b>03</b><span>BREAKOUT</span><strong>—</strong></div><div><b>04</b><span>POC PULLBACK</span><strong>—</strong></div><div><b>05</b><span>CONTINUATION</span><strong>—</strong></div>
+        <div><b>01</b><span>MARKET STRUCTURE</span><strong>READ</strong></div><div><b>02</b><span>SWING STRUCTURE</span><strong>READ</strong></div><div><b>03</b><span>SUPPORT / RESISTANCE</span><strong>READ</strong></div><div><b>04</b><span>MOMENTUM</span><strong>READ</strong></div><div><b>05</b><span>CANDLE CONFIRMATION</span><strong>READ</strong></div>
       </div>
       <div class="context-grid"><div><span>POC</span><b id="poc">—</b></div><div><span>SUPPORT</span><b id="support">—</b></div><div><span>RESISTANCE</span><b id="resistance">—</b></div><div><span>VOLATILITY</span><b id="volatility">—</b></div></div>
     </article>
