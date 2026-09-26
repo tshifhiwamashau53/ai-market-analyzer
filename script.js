@@ -18,6 +18,22 @@ function volumeProfile(c,bins=40){if(!c.length)return null;const lo=Math.min(...
 function enrich(m){const c=(m.candles||[]).filter(x=>[x.open,x.high,x.low,x.close].every(Number.isFinite));if(c.length<30)return m;const closes=c.map(x=>x.close),price=closes.at(-1),e20=ema(closes,20),e50=ema(closes,50),r=rsi(closes),a=atr(c),v=vwap(c),recent=c.slice(-30),support=Math.min(...recent.map(x=>x.low)),resistance=Math.max(...recent.map(x=>x.high)),structure=price>e20&&e20>e50?'BULLISH':price<e20&&e20<e50?'BEARISH':'NEUTRAL',momentum=price>e20&&r>=55?'POSITIVE':price<e20&&r<=45?'NEGATIVE':'MIXED',volPct=a&&price?a/price*100:0;return {...m,indicators:{...(m.indicators||{}),ema20:e20,ema50:e50,rsi14:r,atr14:a,vwap:v,support,resistance,structure},poc:volumeProfile(c),momentum,volatility:volPct}}
 async function loadMarket(tf){return enrich(await getJson(basePath()+'api/market-data?asset='+encodeURIComponent(state.asset)+'&interval='+encodeURIComponent(tf)+'&limit=220'))}
 
+function candlePattern(c){
+ const body=Math.abs(c.close-c.open),range=c.high-c.low,upper=c.high-Math.max(c.open,c.close),lower=Math.min(c.open,c.close)-c.low;
+ if(!range||body/range<0.1)return 'DOJI';
+ if(body/range<0.3&&lower>body*2&&upper<body)return c.close>=c.open?'HAMMER':'HAMMER-LIKE';
+ if(body/range<0.3&&upper>body*2&&lower<body)return c.close<=c.open?'SHOOTING STAR':'INVERTED HAMMER';
+ if(body/range>0.8)return c.close>c.open?'STRONG BULLISH CANDLE':'STRONG BEARISH CANDLE';
+ return c.close>c.open?'BULLISH CANDLE':'BEARISH CANDLE';
+}
+function readCandles(m){
+ const c=m?.candles||[]; if(c.length<3)return null;
+ const last=c.at(-1),prev=c.at(-2),pattern=candlePattern(last);
+ const prevPattern=candlePattern(prev);
+ const engulfBull=last.close>last.open&&prev.close<prev.open&&last.open<=prev.close&&last.close>=prev.open;
+ const engulfBear=last.close<last.open&&prev.close>prev.open&&last.open>=prev.close&&last.close<=prev.open;
+ return {pattern,prevPattern,engulfBull,engulfBear,last,prev};
+}
 function classifyStages(m4,m1,m15,m5){
  const ms=[m4,m1,m15,m5].filter(Boolean),bull=ms.filter(m=>m.indicators?.structure==='BULLISH').length,bear=ms.filter(m=>m.indicators?.structure==='BEARISH').length;
  const bias=bull>bear?'BULLISH':bear>bull?'BEARISH':'NEUTRAL',m=m15||m5||m1||m4,c=m?.candles||[],recent=c.slice(-40),ranges=recent.map(x=>x.high-x.low),avg=ranges.length?ranges.reduce((a,b)=>a+b,0)/ranges.length:0,old=c.slice(-80,-40).map(x=>x.high-x.low),oldAvg=old.length?old.reduce((a,b)=>a+b,0)/old.length:avg,compression=avg>0&&avg<oldAvg*.82,last=recent.at(-1),prior=recent.slice(-10,-1),rangeHigh=prior.length?Math.max(...prior.map(x=>x.high)):null,rangeLow=prior.length?Math.min(...prior.map(x=>x.low)):null,breakoutUp=last&&rangeHigh&&last.close>rangeHigh,breakoutDown=last&&rangeLow&&last.close<rangeLow,poc=m?.poc,nearPoc=Number.isFinite(poc)&&m.indicators?.atr14?Math.abs(last.close-poc)<=m.indicators.atr14*.45:false,continuationUp=last&&last.close>last.open&&m.indicators.structure==='BULLISH',continuationDown=last&&last.close<last.open&&m.indicators.structure==='BEARISH',breakout=breakoutUp?'BULLISH':breakoutDown?'BEARISH':'WAITING',continuation=continuationUp?'BULLISH':continuationDown?'BEARISH':'WAITING';
@@ -33,7 +49,7 @@ function renderMain(m,setup){
  const vals=[['EMA 20',fmt(i.ema20)],['EMA 50',fmt(i.ema50)],['RSI 14',Number.isFinite(i.rsi14)?i.rsi14.toFixed(1):'—'],['ATR 14',fmt(i.atr14)],['VWAP',fmt(i.vwap)],['STRUCTURE',i.structure||'—']];$('indicators').innerHTML=vals.map(x=>'<div><span>'+x[0]+'</span><b>'+x[1]+'</b></div>').join('');
  $('stageFlow').innerHTML=setup.stages.map((x,n)=>'<div><b>0'+(n+1)+'</b><span>'+x[0]+'</span><strong>'+x[1]+'</strong></div>').join('');set('setupState',setup.continuation==='WAITING'?'WAITING FOR CONFIRMATION':setup.continuation+' CONTINUATION');
  set('dataSource','DATA SOURCE — '+(m.provider||'market API'));const age=m.timestamp?Math.max(0,(Date.now()-new Date(m.timestamp).getTime())/1000):null;set('dataAge',age!==null?'LAST UPDATE — '+Math.round(age)+'s AGO':'LAST UPDATE — —');set('apiMode','ENGINE — TECHNICAL + CANDLE ANALYSIS');set('analyzedAt',new Date().toLocaleTimeString());
- const reasons=['HTF alignment: '+setup.bias+'.','EMA structure: '+(i.structure||'neutral')+'; EMA20 '+fmt(i.ema20)+', EMA50 '+fmt(i.ema50)+'.','Momentum: '+(m.momentum||'mixed')+'; RSI14 '+(Number.isFinite(i.rsi14)?i.rsi14.toFixed(1):'—')+'.','POC reference: '+fmt(m.poc)+'; current reference: '+fmt(m.price)+'.','ATR volatility: '+fmt(i.atr14)+'; recent support '+fmt(i.support)+', resistance '+fmt(i.resistance)+'.'];$('reasoning').innerHTML=reasons.map(x=>'<li>'+esc(x)+'</li>').join('')
+ const candle=readCandles(m); const candleText=candle?('Latest candle: '+candle.pattern+'. Previous: '+candle.prevPattern+'.'+(candle.engulfBull?' Bullish engulfing detected.':'')+(candle.engulfBear?' Bearish engulfing detected.':'')):'Candle data unavailable.'; const reasons=[candleText,'HTF alignment: '+setup.bias+'.','EMA structure: '+(i.structure||'neutral')+'; EMA20 '+fmt(i.ema20)+', EMA50 '+fmt(i.ema50)+'.','Momentum: '+(m.momentum||'mixed')+'; RSI14 '+(Number.isFinite(i.rsi14)?i.rsi14.toFixed(1):'—')+'.','POC reference: '+fmt(m.poc)+'; current reference: '+fmt(m.price)+'.','ATR volatility: '+fmt(i.atr14)+'; recent support '+fmt(i.support)+', resistance '+fmt(i.resistance)+'.'];$('reasoning').innerHTML=reasons.map(x=>'<li>'+esc(x)+'</li>').join('')
 }
 function apiBase(){return '/api/'}
 function analysisImage(){
