@@ -12,13 +12,13 @@ provider = YahooFinanceProvider()
 
 @router.get("/{symbol}", response_model=AdvancedAnalysisResponse)
 async def advanced(symbol: str, execution_timeframe: str = "15m"):
-    symbol = symbol.upper()
-    allowed = {"1h", "15m", "5m"}
-    if execution_timeframe not in allowed:
-        raise HTTPException(400, "execution_timeframe must be 1h, 15m, or 5m")
+    symbol = symbol.upper().strip()
+    if execution_timeframe not in {"5m", "15m", "1h"}:
+        raise HTTPException(400, "execution_timeframe must be 5m, 15m, or 1h")
 
     frames = {"4h": "60m", "1h": "1h", "15m": "15m", "5m": "5m"}
     periods = {"4h": "60d", "1h": "60d", "15m": "30d", "5m": "30d"}
+    execution_df_key = execution_timeframe
     try:
         data = await asyncio.gather(*[
             provider.history(symbol, periods[tf], interval)
@@ -27,25 +27,12 @@ async def advanced(symbol: str, execution_timeframe: str = "15m"):
     except Exception as exc:
         raise HTTPException(502, f"Advanced market data unavailable: {exc}")
 
-    data[0] = (
-        data[0].resample("4h")
-        .agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"})
-        .dropna()
-    )
-
     snaps = [snapshot(df, tf) for tf, df in zip(frames, data)]
-    execution_index = list(frames).index(execution_timeframe)
-    execution_df = data[execution_index]
     higher = snaps[0].direction
+    execution_df = data[list(frames).index(execution_df_key)]
     result = evaluate(execution_df, higher)
-    current = snaps[execution_index].price
+    current = float(execution_df.close.iloc[-1])
     forecast = baseline_forecast(execution_df, 7)
-
-    quality = "GOOD"
-    if len(execution_df) < 100:
-        quality = "LIMITED_HISTORY"
-
-    action = "BUY" if result.confirmed and result.direction == "BULLISH" else "SELL" if result.confirmed and result.direction == "BEARISH" else "WAIT"
 
     return AdvancedAnalysisResponse(
         symbol=symbol,
@@ -53,7 +40,7 @@ async def advanced(symbol: str, execution_timeframe: str = "15m"):
         current_price=current,
         higher_timeframe_bias=higher,
         market_state=result.stage,
-        action=action,
+        action=("BUY" if result.direction == "BULLISH" else "SELL" if result.direction == "BEARISH" else "WAIT") if result.confirmed else "WAIT",
         confidence=result.score / 100,
         timeframes=[
             TimeframeSnapshot(
@@ -83,14 +70,13 @@ async def advanced(symbol: str, execution_timeframe: str = "15m"):
             targets=result.targets,
             invalidation=result.invalidation,
             risk_reward=result.risk_reward,
+            waiting_for=result.waiting_for,
+            reasons=result.reasons,
             range_high=result.range_high,
             range_low=result.range_low,
             poc=result.poc,
-            breakout_level=result.breakout_level,
-            waiting_for=result.waiting_for,
-            reasons=result.reasons,
         ),
         forecast=forecast,
-        data_quality=quality,
+        data_quality="PROVIDER_DATA",
         generated_at=datetime.now(timezone.utc).isoformat(),
     )
