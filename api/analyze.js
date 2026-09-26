@@ -1,144 +1,178 @@
-function roundPrice(value) {
-  if (!Number.isFinite(value)) return null;
-  if (Math.abs(value) >= 100) return Number(value.toFixed(2));
-  if (Math.abs(value) >= 1) return Number(value.toFixed(4));
-  return Number(value.toFixed(6));
+function safeNumber(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 
-function directionFromIndicators(market, visual) {
-  const i = market?.indicators || {};
-  const price = Number(market?.price);
-  const ema20 = Number(i.ema20);
-  const ema50 = Number(i.ema50);
-  const rsi = Number(i.rsi14);
-  if (![price, ema20, ema50].every(Number.isFinite)) return { action: 'WAIT', score: 0, signals: [] };
-
-  let score = 0;
-  const signals = [];
-  if (price > ema20) { score += 1; signals.push('Price is above EMA 20.'); }
-  else { score -= 1; signals.push('Price is below EMA 20.'); }
-  if (ema20 > ema50) { score += 2; signals.push('EMA 20 is above EMA 50, supporting bullish market structure.'); }
-  else { score -= 2; signals.push('EMA 20 is below EMA 50, supporting bearish market structure.'); }
-  if (Number.isFinite(rsi)) {
-    if (rsi >= 55 && rsi < 70) { score += 1; signals.push(`RSI ${rsi.toFixed(1)} shows positive momentum without being deeply overbought.`); }
-    else if (rsi <= 45 && rsi > 30) { score -= 1; signals.push(`RSI ${rsi.toFixed(1)} shows negative momentum without being deeply oversold.`); }
-    else if (rsi >= 70) signals.push(`RSI ${rsi.toFixed(1)} is overbought, so a bullish entry has higher pullback risk.`);
-    else if (rsi <= 30) signals.push(`RSI ${rsi.toFixed(1)} is oversold, so a bearish entry has higher rebound risk.`);
-  }
-  if (visual?.available && (visual.visualBias === 'BULLISH' || visual.visualBias === 'BEARISH')) {
-    const visualScore = visual.visualBias === 'BULLISH' ? 1 : -1;
-    score += visualScore;
-    signals.push(`Local screenshot pixel analysis detected ${visual.visualBias.toLowerCase()} candle-color bias.`);
-  }
-  const action = score >= 2 ? 'BUY' : score <= -2 ? 'SELL' : 'WAIT';
-  return { action, score, signals };
-}
-
-function buildLevels(market, action, risk) {
-  const price = Number(market?.price);
-  const i = market?.indicators || {};
-  const atr = Number(i.atr14);
-  const support = Number(i.support);
-  const resistance = Number(i.resistance);
-  if (!Number.isFinite(price) || !Number.isFinite(atr) || atr <= 0 || !['BUY', 'SELL'].includes(action)) return { entry: Number.isFinite(price) ? roundPrice(price) : null, stopLoss: null, takeProfit1: null, takeProfit2: null, takeProfit3: null, riskDistance: null };
-
-  const multiplier = risk === 'Conservative' ? 1.25 : risk === 'Aggressive' ? 0.85 : 1;
-  const distance = atr * multiplier;
-  let stopLoss;
-  let targets;
-  if (action === 'BUY') {
-    stopLoss = Number.isFinite(support) && support < price ? Math.min(support, price - distance) : price - distance;
-    const riskDistance = Math.max(price - stopLoss, distance * 0.75);
-    targets = [price + riskDistance, price + riskDistance * 2, price + riskDistance * 3];
-  } else {
-    stopLoss = Number.isFinite(resistance) && resistance > price ? Math.max(resistance, price + distance) : price + distance;
-    const riskDistance = Math.max(stopLoss - price, distance * 0.75);
-    targets = [price - riskDistance, price - riskDistance * 2, price - riskDistance * 3];
-  }
+function compactMarket(m) {
+  if (!m) return null;
+  const i = m.indicators || {};
   return {
-    entry: roundPrice(price),
-    stopLoss: roundPrice(stopLoss),
-    takeProfit1: roundPrice(targets[0]),
-    takeProfit2: roundPrice(targets[1]),
-    takeProfit3: roundPrice(targets[2]),
-    riskDistance: roundPrice(Math.abs(price - stopLoss))
+    asset: m.asset,
+    timeframe: m.timeframe,
+    provider: m.provider,
+    timestamp: m.timestamp,
+    price: safeNumber(m.price),
+    changePercent: safeNumber(m.changePercent),
+    poc: safeNumber(m.poc),
+    indicators: {
+      ema20: safeNumber(i.ema20),
+      ema50: safeNumber(i.ema50),
+      rsi14: safeNumber(i.rsi14),
+      atr14: safeNumber(i.atr14),
+      vwap: safeNumber(i.vwap),
+      support: safeNumber(i.support),
+      resistance: safeNumber(i.resistance),
+      structure: i.structure || 'NEUTRAL'
+    },
+    momentum: m.momentum || 'MIXED',
+    volatility: safeNumber(m.volatility)
   };
 }
 
+function buildPrompt(body) {
+  const markets = body.markets || {};
+  return [
+    'You are the AI reasoning layer of a read-only market research dashboard.',
+    'Do not place orders, connect to a broker, or claim certainty or guaranteed profitability.',
+    'Analyze the supplied numerical market data and, if present, the supplied chart screenshot.',
+    'Use this sequence as the requested framework: higher-timeframe bias -> accumulation -> volume profile/POC -> breakout -> pullback to POC -> continuation.',
+    'Only mark a stage as confirmed when the supplied evidence supports it. If evidence is missing, say WAITING or UNCONFIRMED.',
+    'Treat confidence as analysis quality/confluence, NOT probability of profit.',
+    'If the screenshot and numerical data disagree, explicitly mention the disagreement.',
+    'Never invent a current price. Use only supplied market data.',
+    '',
+    JSON.stringify({
+      asset: body.asset,
+      executionTimeframe: body.timeframe,
+      depth: body.depth || 'deep',
+      markets: {
+        '4h': compactMarket(markets['4h']),
+        '1h': compactMarket(markets['1h']),
+        '15m': compactMarket(markets['15m']),
+        '5m': compactMarket(markets['5m'])
+      },
+      strategy: body.strategy || null,
+      visualAnalysis: body.visualAnalysis || null,
+      news: Array.isArray(body.news) ? body.news.slice(0, 8) : [],
+      calendar: Array.isArray(body.calendar) ? body.calendar.slice(0, 8) : []
+    }, null, 2)
+  ].join('\n');
+}
+
+const schema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    market_state: { type: 'string', enum: ['BULLISH', 'BEARISH', 'NEUTRAL', 'WAIT'] },
+    higher_timeframe_bias: { type: 'string', enum: ['BULLISH', 'BEARISH', 'NEUTRAL'] },
+    setup_stage: { type: 'string' },
+    analysis_quality: { type: 'number', minimum: 0, maximum: 100 },
+    summary: { type: 'string' },
+    waiting_for: { type: 'string' },
+    reference_level: { type: ['number', 'null'] },
+    invalidation_level: { type: ['number', 'null'] },
+    target_levels: { type: 'array', items: { type: 'number' } },
+    poc: { type: ['number', 'null'] },
+    reasoning: { type: 'array', items: { type: 'string' } },
+    risk_notes: { type: 'array', items: { type: 'string' } },
+    data_quality: { type: 'string', enum: ['GOOD', 'PARTIAL', 'INSUFFICIENT'] }
+  },
+  required: [
+    'market_state',
+    'higher_timeframe_bias',
+    'setup_stage',
+    'analysis_quality',
+    'summary',
+    'waiting_for',
+    'reference_level',
+    'invalidation_level',
+    'target_levels',
+    'poc',
+    'reasoning',
+    'risk_notes',
+    'data_quality'
+  ]
+};
+
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' });
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'POST required' });
+  }
+
+  if (!process.env.OPENAI_API_KEY) {
+    return res.status(503).json({
+      error: 'OPENAI_API_KEY is not configured on Vercel.',
+      setup: 'Add OPENAI_API_KEY to the Vercel project Environment Variables and redeploy.'
+    });
+  }
+
   try {
     const body = req.body || {};
-    const { image, visualAnalysis, asset, timeframe, style, risk, market, news, calendar } = body;
-    const selectedAsset = String(asset || '').toUpperCase();
-    if (!selectedAsset) return res.status(400).json({ error: 'An asset is required.' });
-    if (!market || String(market.asset || '').toUpperCase() !== selectedAsset) return res.status(400).json({ error: 'Market context for the selected asset is required.' });
+    const asset = String(body.asset || '').toUpperCase();
+    if (!asset) return res.status(400).json({ error: 'An asset is required.' });
 
-    const price = Number(market.price);
-    const machineData = Boolean(market.dataAvailable && Array.isArray(market.candles) && market.candles.length >= 50 && market.indicators);
-    const local = machineData ? directionFromIndicators(market, visualAnalysis) : { action: 'WAIT', score: 0, signals: [] };
-    const levels = machineData ? buildLevels(market, local.action, risk) : { entry: null, stopLoss: null, takeProfit1: null, takeProfit2: null, takeProfit3: null, riskDistance: null };
-    const newsCount = Array.isArray(news) ? news.length : 0;
-    const calendarCount = Array.isArray(calendar) ? calendar.length : 0;
-    const confidence = machineData ? Math.min(92, 50 + Math.abs(local.score) * 9 + (Number.isFinite(Number(market.indicators.rsi14)) ? 5 : 0) + (visualAnalysis?.available ? 4 : 0)) : visualAnalysis?.available ? Math.min(65, 40 + Math.round((visualAnalysis.chartDensity || 0) / 4)) : 0;
-    const macroRisk = calendarCount >= 3 ? 'HIGH' : newsCount >= 3 || calendarCount > 0 ? 'MEDIUM' : 'LOW';
-    const screenshotNote = typeof image === 'string' && image.startsWith('data:image/')
-      ? 'The screenshot stayed in the browser. A local pixel detector extracted visual candle-color signals; no AI image service was used.'
-      : 'No screenshot was supplied.';
+    const prompt = buildPrompt(body);
+    const input = [{ role: 'user', content: [{ type: 'input_text', text: prompt }] }];
 
-    const indicators = market.indicators || {};
-    const reason = machineData
-      ? `${local.action === 'WAIT' ? 'The technical signals are mixed, so the local engine chooses WAIT.' : `The local technical model produces a ${local.action} bias.`} ${local.signals.join(' ')}`
-      : 'Verified numeric OHLC data is not available, so the local engine will not invent entry, stop-loss or take-profit prices.';
-    const summary = machineData
-      ? `Local, API-free analysis for ${selectedAsset} on ${timeframe}. EMA 20/50, RSI 14, ATR 14, recent support/resistance and optional screenshot pixels were evaluated. Macro context: ${macroRisk.toLowerCase()} risk.`
-      : `Local screenshot detection completed where possible, but verified OHLC data is unavailable for ${selectedAsset}. The result remains WAIT rather than inventing trade levels.`;
+    if (typeof body.image === 'string' && body.image.startsWith('data:image/')) {
+      input[0].content.push({
+        type: 'input_image',
+        image_url: body.image,
+        detail: 'high'
+      });
+    }
+
+    const response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || 'gpt-5.6-luna',
+        input,
+        reasoning: { effort: 'medium' },
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'market_analysis',
+            strict: true,
+            schema
+          }
+        }
+      })
+    });
+
+    const raw = await response.json();
+    if (!response.ok) {
+      return res.status(response.status >= 500 ? 502 : response.status).json({
+        error: 'OpenAI request failed.',
+        details: raw?.error?.message || 'Unknown OpenAI API error.'
+      });
+    }
+
+    const text = raw.output_text || raw.output?.flatMap(x => x.content || []).find(x => x.type === 'output_text')?.text;
+    if (!text) return res.status(502).json({ error: 'OpenAI returned no analysis text.' });
+
+    let analysis;
+    try {
+      analysis = JSON.parse(text);
+    } catch {
+      return res.status(502).json({ error: 'OpenAI returned invalid structured analysis.' });
+    }
 
     return res.status(200).json({
-      bias: local.action,
-      confidence,
-      reason,
-      reasoning: [
-        ...local.signals,
-        Number.isFinite(Number(indicators.atr14)) ? `ATR 14: ${roundPrice(Number(indicators.atr14))}.` : 'ATR 14: unavailable.',
-        Number.isFinite(Number(indicators.support)) ? `Recent support estimate: ${roundPrice(Number(indicators.support))}.` : 'Recent support: unavailable.',
-        Number.isFinite(Number(indicators.resistance)) ? `Recent resistance estimate: ${roundPrice(Number(indicators.resistance))}.` : 'Recent resistance: unavailable.',
-        indicators.structure ? `Market structure: ${indicators.structure}.` : 'Market structure: unavailable.',
-        visualAnalysis?.available ? `Local screenshot detection: ${visualAnalysis.visualBias} visual bias with ${visualAnalysis.chartDensity}% color density.` : 'Local screenshot detection: unavailable.',
-        screenshotNote
-      ],
-      summary,
-      priceContext: Number.isFinite(price) ? `Current machine-readable price: ${roundPrice(price)}.` : 'No verified numeric price available.',
-      newsRisk: macroRisk,
-      warning: machineData
-        ? 'Educational research only. Entry, stop-loss and target levels are mathematical estimates based on current market data and can be wrong, especially around major news.'
-        : `WAIT mode: no trade levels were generated because verified OHLC data is unavailable for ${selectedAsset}. ${screenshotNote}`,
-      chartUsed: typeof image === 'string' && image.startsWith('data:image/'),
-      machineDataUsed: machineData,
-      model: 'LOCAL-RULE-ENGINE',
-      analyzedAt: new Date().toISOString(),
-      livePriceUsed: Number.isFinite(price) ? price : null,
-      livePriceTimestamp: market.timestamp || null,
-      liveProvider: market.provider || 'Public market data',
-      liveBid: Number.isFinite(Number(market.bid)) ? Number(market.bid) : null,
-      liveAsk: Number.isFinite(Number(market.ask)) ? Number(market.ask) : null,
-      entry: levels.entry,
-      stopLoss: levels.stopLoss,
-      takeProfit1: levels.takeProfit1,
-      takeProfit2: levels.takeProfit2,
-      takeProfit3: levels.takeProfit3,
-      riskDistance: levels.riskDistance,
-      indicators: {
-        ema20: Number.isFinite(Number(indicators.ema20)) ? roundPrice(Number(indicators.ema20)) : null,
-        ema50: Number.isFinite(Number(indicators.ema50)) ? roundPrice(Number(indicators.ema50)) : null,
-        rsi14: Number.isFinite(Number(indicators.rsi14)) ? Number(Number(indicators.rsi14).toFixed(2)) : null,
-        atr14: Number.isFinite(Number(indicators.atr14)) ? roundPrice(Number(indicators.atr14)) : null,
-        support: Number.isFinite(Number(indicators.support)) ? roundPrice(Number(indicators.support)) : null,
-        resistance: Number.isFinite(Number(indicators.resistance)) ? roundPrice(Number(indicators.resistance)) : null,
-        structure: indicators.structure || 'NEUTRAL'
-      }
+      ok: true,
+      model: raw.model || process.env.OPENAI_MODEL || 'gpt-5.6-luna',
+      analysis,
+      responseId: raw.id || null,
+      analyzedAt: new Date().toISOString()
     });
   } catch (error) {
-    return res.status(500).json({ error: 'Local market analysis failed', details: error.message });
+    return res.status(500).json({
+      error: 'AI analysis failed.',
+      details: error?.message || 'Unknown server error.'
+    });
   }
 }
