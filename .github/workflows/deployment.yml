@@ -5,6 +5,13 @@ on:
     branches:
       - main
 
+# Keep only one Pages deployment workflow active at a time.
+# This prevents overlapping deployments from causing:
+# "due to in progress deployment"
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pages: write
