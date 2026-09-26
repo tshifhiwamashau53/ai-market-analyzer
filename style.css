@@ -115,3 +115,33 @@
 .signal-levels b,.signal-meta b{display:block;font:700 15px 'DM Mono';margin-top:9px;word-break:break-word}
 .signal-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 @media(max-width:760px){.signal-levels{grid-template-columns:1fr 1fr}.signal-meta{grid-template-columns:1fr}}
+
+
+/* Slightly enlarged main interface */
+.container{max-width:1200px;padding-top:20px}
+.topbar{padding-left:max(16px,calc((100vw - 1200px)/2));padding-right:max(16px,calc((100vw - 1200px)/2))}
+.hero{gap:26px;margin-bottom:16px}
+.hero-copy{font-size:15px}
+.control-card{padding:18px;margin-bottom:32px}
+.control-card select{height:50px;font-size:12px}
+.section-head{margin-bottom:15px}
+.section-head h2{font-size:27px}
+.metric-card{min-height:158px;padding:20px}
+.metric-card strong{font-size:30px;margin:18px 0 8px}
+.panel{padding:20px;margin-bottom:12px}
+.panel-head{margin-bottom:16px}
+.panel-head h3{font-size:19px}
+.timeframes div,.indicator-grid div,.context-grid div{padding:13px}
+.stage-flow div{padding:14px;min-height:100px}
+.reasoning{font-size:12px}
+.macro{font-size:13px}
+@media(max-width:760px){
+  .container{padding:18px 12px 45px}
+  .topbar{padding:10px 12px}
+  .hero{margin-bottom:15px}
+  .hero-copy{font-size:14px}
+  .control-card{padding:16px}
+  .section-head h2{font-size:25px}
+  .metric-card{min-height:150px;padding:18px}
+  .panel{padding:18px}
+}
