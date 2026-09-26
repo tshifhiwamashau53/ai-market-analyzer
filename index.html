@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0d1411">
-<meta name="description" content="Premium market analysis dashboard with live OHLC analysis and chart screenshot annotation.">
+<meta name="description" content="Read-only market analysis dashboard with live TradingView charts and AI technical and fundamental research.">
 <title>AI Market Analyzer Pro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260926-03">
+<link rel="stylesheet" href="style.css?v=20260926-04">
 </head>
 <body>
 <header class="topbar">
@@ -18,12 +18,11 @@
 </header>
 
 <main class="container">
-
   <section class="hero">
     <div>
-      <p class="eyebrow">REAL-TIME MARKET RESEARCH</p>
+      <p class="eyebrow">LIVE MARKET RESEARCH</p>
       <h1>Market context.<br><span>One clean view.</span></h1>
-      <p class="hero-copy">Use live TradingView charts with multi-timeframe market research and AI technical + fundamental analysis.</p>
+      <p class="hero-copy">Live TradingView charts for BTCUSD and XAUUSD, synchronized market data, multi-timeframe technical analysis, news, fundamentals and AI reasoning.</p>
     </div>
   </section>
 
@@ -35,53 +34,14 @@
     <div class="chart-grid">
       <article class="panel chart-panel">
         <div class="panel-head"><div><span class="eyebrow">BTCUSD</span><h3>Bitcoin / US Dollar</h3></div><span class="pill">LIVE</span></div>
-        <div class="tradingview-widget-container">
-          <div id="tradingview-btc" class="tradingview-widget-container__widget"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
-          {
-            "autosize": true,
-            "symbol": "COINBASE:BTCUSD",
-            "interval": "15",
-            "timezone": "Africa/Johannesburg",
-            "theme": "light",
-            "style": "1",
-            "locale": "en",
-            "allow_symbol_change": false,
-            "calendar": false,
-            "hide_top_toolbar": false,
-            "hide_legend": false,
-            "save_image": false,
-            "hide_side_toolbar": false,
-            "support_host": "https://www.tradingview.com"
-          }
-          </script>
-        </div>
+        <div id="tradingview-btc" class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>
       </article>
       <article class="panel chart-panel">
         <div class="panel-head"><div><span class="eyebrow">XAUUSD</span><h3>Gold / US Dollar</h3></div><span class="pill">LIVE</span></div>
-        <div class="tradingview-widget-container">
-          <div id="tradingview-xau" class="tradingview-widget-container__widget"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
-          {
-            "autosize": true,
-            "symbol": "OANDA:XAUUSD",
-            "interval": "15",
-            "timezone": "Africa/Johannesburg",
-            "theme": "light",
-            "style": "1",
-            "locale": "en",
-            "allow_symbol_change": false,
-            "calendar": false,
-            "hide_top_toolbar": false,
-            "hide_legend": false,
-            "save_image": false,
-            "hide_side_toolbar": false,
-            "support_host": "https://www.tradingview.com"
-          }
-          </script>
-        </div>
+        <div id="tradingview-xau" class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>
       </article>
     </div>
+    <p class="chart-note">The charts are supplied by TradingView. The AI analysis uses synchronized OHLC market data for the same instruments and selected timeframe; it does not pretend to read pixels from the embedded TradingView iframe.</p>
   </section>
 
   <section class="control-card">
@@ -89,11 +49,6 @@
       <label>ASSET<select id="asset">
         <option value="XAUUSD">XAUUSD</option>
         <option value="BTCUSD">BTCUSD</option>
-        <option value="ETHUSD">ETHUSD</option>
-        <option value="SOLUSD">SOLUSD</option>
-        <option value="US30">US30</option>
-        <option value="EURUSD">EURUSD</option>
-        <option value="GBPUSD">GBPUSD</option>
       </select></label>
       <label>EXECUTION TIMEFRAME<select id="timeframe">
         <option value="5m">5 MIN</option><option value="15m" selected>15 MIN</option><option value="1h">1 HOUR</option>
@@ -133,12 +88,14 @@
       </article>
     </div>
 
-    <article class="panel strategy-panel"><div class="panel-head"><div><span class="eyebrow">PRICE ACTION</span><h3>Candle & structure reading</h3></div><span class="pill">TECHNICAL</span></div><div class="context-grid"><div><span>ACTION</span><b id="actionState">WAIT</b></div><div><span>LAST CANDLE</span><b id="lastCandle">—</b></div><div><span>PREVIOUS</span><b id="previousCandle">—</b></div><div><span>ENTRY PLAN</span><b id="entryPlan">Wait for AI analysis</b></div></div><p id="actionReason" class="muted">The local engine reads OHLC candles; OpenAI will provide deeper reasoning and fundamentals when configured.</p></article><article class="panel strategy-panel">
+    <article class="panel strategy-panel"><div class="panel-head"><div><span class="eyebrow">PRICE ACTION</span><h3>Candle & structure reading</h3></div><span class="pill">TECHNICAL</span></div><div class="context-grid"><div><span>ACTION</span><b id="actionState">WAIT</b></div><div><span>LAST CANDLE</span><b id="lastCandle">—</b></div><div><span>PREVIOUS</span><b id="previousCandle">—</b></div><div><span>ENTRY PLAN</span><b id="entryPlan">Wait for analysis</b></div></div><p id="actionReason" class="muted">The engine reads verified OHLC candles. OpenAI adds deeper technical reasoning and current fundamental/news context when configured.</p></article>
+
+    <article class="panel strategy-panel">
       <div class="panel-head"><div><span class="eyebrow">TECHNICAL ANALYSIS</span><h3>Market structure & price action</h3></div><span class="pill" id="setupState">WAITING</span></div>
       <div class="stage-flow" id="stageFlow">
-        <div><b>01</b><span>MARKET STRUCTURE</span><strong>READ</strong></div><div><b>02</b><span>SWING STRUCTURE</span><strong>READ</strong></div><div><b>03</b><span>SUPPORT / RESISTANCE</span><strong>READ</strong></div><div><b>04</b><span>MOMENTUM</span><strong>READ</strong></div><div><b>05</b><span>CANDLE CONFIRMATION</span><strong>READ</strong></div>
+        <div><b>01</b><span>MARKET STRUCTURE</span><strong>READ</strong></div><div><b>02</b><span>SWING RANGE</span><strong>READ</strong></div><div><b>03</b><span>SUPPORT / RESISTANCE</span><strong>READ</strong></div><div><b>04</b><span>MOMENTUM</span><strong>READ</strong></div><div><b>05</b><span>CANDLE CONFIRMATION</span><strong>READ</strong></div>
       </div>
-      <div class="context-grid"><div><span>POC</span><b id="poc">—</b></div><div><span>SUPPORT</span><b id="support">—</b></div><div><span>RESISTANCE</span><b id="resistance">—</b></div><div><span>VOLATILITY</span><b id="volatility">—</b></div></div>
+      <div class="context-grid"><div><span>POC</span><b id="poc">Not used</b></div><div><span>SUPPORT</span><b id="support">—</b></div><div><span>RESISTANCE</span><b id="resistance">—</b></div><div><span>VOLATILITY</span><b id="volatility">—</b></div></div>
     </article>
 
     <div class="grid-2">
@@ -148,7 +105,7 @@
   </section>
 </main>
 
-<footer><span>AI Market Analyzer Pro · deterministic research engine</span><span>Data is read-only. Levels are analytical estimates, not guarantees.</span></footer>
-<script src="script.js?v=20260926-03" defer></script>
+<footer><span>AI Market Analyzer Pro · read-only research</span><span>Levels are analytical reference areas, not guarantees.</span></footer>
+<script src="script.js?v=20260926-04" defer></script>
 </body>
 </html>
