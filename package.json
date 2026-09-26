@@ -1,5 +1,12 @@
 {
   "name": "ai-market-analyzer",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "build": "npm run build:web",
+    "build:web": "npm --prefix apps/web run build",
+    "dev": "npm --prefix apps/web run dev",
+    "lint": "npm --prefix apps/web run lint",
+    "start": "npm --prefix apps/web run start"
+  }
 }
