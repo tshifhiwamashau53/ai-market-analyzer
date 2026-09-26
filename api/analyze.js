@@ -35,7 +35,13 @@ function buildPrompt(body) {
     'You are the AI reasoning layer of a read-only market research dashboard.',
     'Do not place orders, connect to a broker, or claim certainty or guaranteed profitability.',
     'Analyze the supplied numerical market data and, if present, the supplied chart screenshot.',
-    'Use this sequence as the requested framework: higher-timeframe bias -> accumulation -> volume profile/POC -> breakout -> pullback to POC -> continuation.',
+    'Do NOT use any named strategy or fixed sequence. Use pure technical analysis and price action.',
+    'Read the candles and classify identifiable patterns (doji, hammer, shooting star, bullish/bearish engulfing, pin bar, inside bar, marubozu/strong momentum candle, spinning top, etc.) only when the OHLC evidence supports the label.',
+    'Read market structure: swing highs/lows, HH/HL, LH/LL, breaks of structure, failed breaks, support/resistance, trend, momentum and volatility.',
+    'Explain WHY the evidence supports bullish, bearish or neutral direction. Separate observed facts from interpretation.',
+    'Give timing as BUY AREA, SELL AREA, WAIT, or NO TRADE. Do not claim certainty or guaranteed outcomes.',
+    'Give conditional entry/reference areas and invalidation/target levels only when supported by supplied price data; clearly state what confirmation is required before entry.',
+    'Evaluate fundamental context and recent news. Rate each important news event by likely market impact as LOW, MEDIUM, HIGH, or EXTREME and explain the reason. Do not invent events.',
     'Only mark a stage as confirmed when the supplied evidence supports it. If evidence is missing, say WAITING or UNCONFIRMED.',
     'Treat confidence as analysis quality/confluence, NOT probability of profit.',
     'If the screenshot and numerical data disagree, explicitly mention the disagreement.',
@@ -51,7 +57,7 @@ function buildPrompt(body) {
         '15m': compactMarket(markets['15m']),
         '5m': compactMarket(markets['5m'])
       },
-      strategy: body.strategy || null,
+      strategy: null,
       visualAnalysis: body.visualAnalysis || null,
       news: Array.isArray(body.news) ? body.news.slice(0, 8) : [],
       calendar: Array.isArray(body.calendar) ? body.calendar.slice(0, 8) : []
@@ -66,6 +72,13 @@ const schema = {
     market_state: { type: 'string', enum: ['BULLISH', 'BEARISH', 'NEUTRAL', 'WAIT'] },
     higher_timeframe_bias: { type: 'string', enum: ['BULLISH', 'BEARISH', 'NEUTRAL'] },
     setup_stage: { type: 'string' },
+    candle_reading: { type: 'string' },
+    direction_reason: { type: 'string' },
+    action_state: { type: 'string', enum: ['BUY AREA', 'SELL AREA', 'WAIT', 'NO TRADE'] },
+    action_reason: { type: 'string' },
+    entry_plan: { type: 'string' },
+    news_assessment: { type: 'string' },
+    news_events: { type: 'array', items: { type: 'string' } },
     analysis_quality: { type: 'number', minimum: 0, maximum: 100 },
     summary: { type: 'string' },
     waiting_for: { type: 'string' },
@@ -81,6 +94,13 @@ const schema = {
     'market_state',
     'higher_timeframe_bias',
     'setup_stage',
+    'candle_reading',
+    'direction_reason',
+    'action_state',
+    'action_reason',
+    'entry_plan',
+    'news_assessment',
+    'news_events',
     'analysis_quality',
     'summary',
     'waiting_for',
@@ -101,10 +121,7 @@ export default async function handler(req, res) {
   }
 
   if (!process.env.OPENAI_API_KEY) {
-    return res.status(503).json({
-      error: 'OPENAI_API_KEY is not configured on Vercel.',
-      setup: 'Add OPENAI_API_KEY to the Vercel project Environment Variables and redeploy.'
-    });
+    return res.status(200).json({ ok: true, available: false, mode: 'LOCAL', message: 'OpenAI is not configured yet. Local technical analysis remains active.' });
   }
 
   try {
