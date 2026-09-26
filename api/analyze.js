@@ -130,7 +130,9 @@ export default async function handler(req, res) {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || 'gpt-5.6-luna',
+        model: process.env.OPENAI_MODEL || 'gpt-5.5',
+        tools: [{ type: 'web_search' }],
+        tool_choice: { type: 'web_search' },
         input,
         reasoning: { effort: 'medium' },
         text: {
