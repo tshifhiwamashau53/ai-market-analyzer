@@ -80,4 +80,6 @@ export const analyzeMarket=async(symbol:string,period="6mo",interval="15m"):Prom
  };
 };
 
+export type AdvancedAnalysis={symbol:string;execution_timeframe:string;current_price:number;higher_timeframe_bias:string;market_state:string;action:string;confidence:number;timeframes:{timeframe:string;direction:string;structure:string;momentum:string;price:number;ema20:number|null;ema50:number|null;rsi14:number|null;atr14:number|null;vwap:number|null;poc:number|null;support:number|null;resistance:number|null}[];strategy:{stage:string;direction:string;confirmed:boolean;score:number;entry:number|null;stop_loss:number|null;targets:number[];invalidation:number|null;waiting_for:string[];reasons:string[]};forecast:{time:string;value:number;lower:number;upper:number}[];data_quality:string;generated_at:string};
+export const advancedMarket=(symbol:string,executionTimeframe="15m")=>request("/advanced/"+encodeURIComponent(symbol)+"?execution_timeframe="+encodeURIComponent(executionTimeframe)) as Promise<AdvancedAnalysis>;
 export const backtestMarket=(symbol:string,period="2y",interval="1d")=>request("/backtest/"+encodeURIComponent(symbol)+"?period="+period+"&interval="+interval) as Promise<{symbol:string;metrics:{total_return:number;max_drawdown:number;sharpe:number;observations:number}}>;
