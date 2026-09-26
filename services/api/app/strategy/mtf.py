@@ -14,32 +14,25 @@ class Snapshot:
 def _structure(df: pd.DataFrame) -> str:
     if len(df) < 12:
         return "INSUFFICIENT"
-    d=df.tail(12)
-    mid=len(d)//2
-    first_high=float(d.high.iloc[:mid].max()); second_high=float(d.high.iloc[mid:].max())
-    first_low=float(d.low.iloc[:mid].min()); second_low=float(d.low.iloc[mid:].min())
-    if second_high>first_high and second_low>first_low:
-        return "HIGHER_HIGH_HIGHER_LOW"
-    if second_high<first_high and second_low<first_low:
-        return "LOWER_HIGH_LOWER_LOW"
+    h, l = df.high.astype(float), df.low.astype(float)
+    sh = h.rolling(3, center=True).max().dropna()
+    sl = l.rolling(3, center=True).min().dropna()
+    highs = sh.tail(4).to_numpy()
+    lows = sl.tail(4).to_numpy()
+    if len(highs) >= 2 and len(lows) >= 2:
+        if highs[-1] > highs[-2] and lows[-1] > lows[-2]: return "HH_HL"
+        if highs[-1] < highs[-2] and lows[-1] < lows[-2]: return "LH_LL"
     return "RANGE"
 
 def snapshot(df: pd.DataFrame, timeframe: str) -> Snapshot:
-    ind=compute_indicators(df)
-    price=float(df.close.iloc[-1])
-    ema20,ema50=ind.get("ema20"),ind.get("ema50")
-    structure=_structure(df)
-    if structure=="HIGHER_HIGH_HIGHER_LOW":
-        direction="BULLISH"
-    elif structure=="LOWER_HIGH_LOWER_LOW":
-        direction="BEARISH"
-    elif ema20 is not None and ema50 is not None:
-        direction="BULLISH" if ema20>ema50 else "BEARISH" if ema20<ema50 else "NEUTRAL"
-    else:
-        direction="NEUTRAL"
-    if len(df)>=6:
-        delta=float(df.close.iloc[-1]-df.close.iloc[-6])
-        momentum="RISING" if delta>0 else "FALLING" if delta<0 else "FLAT"
-    else:
-        momentum="MIXED"
-    return Snapshot(timeframe,direction,structure,momentum,price,ind)
+    ind = compute_indicators(df)
+    price = float(df.close.iloc[-1])
+    ema20, ema50 = ind.get("ema20"), ind.get("ema50")
+    ema_dir = "BULLISH" if ema20 and ema50 and ema20 > ema50 else "BEARISH" if ema20 and ema50 and ema20 < ema50 else "NEUTRAL"
+    structure = _structure(df)
+    if structure == "HH_HL": direction = "BULLISH"
+    elif structure == "LH_LL": direction = "BEARISH"
+    else: direction = ema_dir
+    delta = float(df.close.iloc[-1] - df.close.iloc[-6]) if len(df) >= 6 else 0
+    momentum = "RISING" if delta > 0 else "FALLING" if delta < 0 else "FLAT"
+    return Snapshot(timeframe, direction, structure, momentum, price, ind)
