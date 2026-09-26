@@ -16,7 +16,7 @@ function chartSymbol(){return state.asset==='BTCUSD'?'COINBASE:BTCUSD':'OANDA:XA
 function chartLabel(){return state.asset==='BTCUSD'?{eyebrow:'BTCUSD',title:'Bitcoin / US Dollar'}:{eyebrow:'XAUUSD',title:'Gold / US Dollar'}}
 function mountTradingView(){
  const host=$('tradingview-selected');if(!host)return;
- host.innerHTML='<div class="tradingview-widget-container__widget"></div>';
+ host.innerHTML='<div class="tradingview-widget-container__widget"></div><div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/" target="_blank" rel="noopener nofollow">TradingView</a></div>';
  const script=document.createElement('script');script.type='text/javascript';script.src='https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';script.async=true;
  script.text=JSON.stringify({autosize:true,symbol:chartSymbol(),interval:tvInterval(),timezone:'Africa/Johannesburg',theme:'light',style:'1',locale:'en',allow_symbol_change:false,calendar:false,hide_top_toolbar:false,hide_legend:false,save_image:false,hide_side_toolbar:false,support_host:'https://www.tradingview.com'});
  host.appendChild(script);
