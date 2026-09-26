@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260926-01">
+<link rel="stylesheet" href="style.css?v=20260926-02">
 </head>
 <body>
 <header class="topbar">
@@ -22,8 +22,26 @@
     <div>
       <p class="eyebrow">REAL-TIME MARKET RESEARCH</p>
       <h1>Market context.<br><span>One clean view.</span></h1>
-      <p class="hero-copy">Multi-timeframe technical analysis, market structure, volume profile, momentum and screenshot annotation. No paid AI model is required.</p>
+      <p class="hero-copy">Upload your chart first, then combine screenshot analysis with multi-timeframe market research and live OpenAI analysis.</p>
     </div>
+  </section>
+
+  <section class="upload-section upload-top">
+    <div class="section-head"><div><p class="eyebrow">START HERE</p><h2>Upload your chart screenshot</h2></div><span class="stamp">LOCAL BROWSER PROCESSING</span></div>
+    <article class="panel upload-panel">
+      <label class="dropzone" id="dropzone">
+        <input id="chartInput" type="file" accept="image/png,image/jpeg,image/webp">
+        <strong>Tap to add a chart screenshot</strong><span>PNG, JPG or WEBP · up to 25 MB</span>
+      </label>
+      <div id="previewWrap" class="preview-wrap" hidden><img id="chartPreview" alt="Chart screenshot"><div class="button-row"><button id="removeImage" class="secondary">Remove</button><button id="saveOriginal" class="secondary">Save original</button></div></div>
+      <button id="analyzeChart" class="primary wide" disabled>Analyze Screenshot <span>↗</span></button>
+    </article>
+    <article class="panel annotation-panel" id="annotationPanel" hidden>
+      <div class="panel-head"><div><span class="eyebrow">CHART OVERLAY</span><h3>Detected structure</h3></div><span class="pill" id="visualState">WAIT</span></div>
+      <p id="visualReason" class="muted">—</p>
+      <canvas id="annotationCanvas"></canvas>
+      <button id="saveAnnotated" class="primary wide">Save annotated chart</button>
+    </article>
   </section>
 
   <section class="control-card">
@@ -88,27 +106,9 @@
       <article class="panel"><div class="panel-head"><div><span class="eyebrow">MACRO CONTEXT</span><h3>News & events</h3></div><span class="pill" id="macroRisk">UNKNOWN</span></div><div id="macro" class="macro">No market context loaded yet.</div></article>
     </div>
   </section>
-
-  <section class="upload-section">
-    <div class="section-head"><div><p class="eyebrow">VISUAL ANALYSIS</p><h2>Annotate a chart screenshot</h2></div><span class="stamp">LOCAL BROWSER PROCESSING</span></div>
-    <article class="panel upload-panel">
-      <label class="dropzone" id="dropzone">
-        <input id="chartInput" type="file" accept="image/png,image/jpeg,image/webp">
-        <strong>Tap to add a chart screenshot</strong><span>PNG, JPG or WEBP · up to 25 MB</span>
-      </label>
-      <div id="previewWrap" class="preview-wrap" hidden><img id="chartPreview" alt="Chart screenshot"><div class="button-row"><button id="removeImage" class="secondary">Remove</button><button id="saveOriginal" class="secondary">Save original</button></div></div>
-      <button id="analyzeChart" class="primary wide" disabled>Analyze Screenshot <span>↗</span></button>
-    </article>
-    <article class="panel annotation-panel" id="annotationPanel" hidden>
-      <div class="panel-head"><div><span class="eyebrow">CHART OVERLAY</span><h3>Detected structure</h3></div><span class="pill" id="visualState">WAIT</span></div>
-      <p id="visualReason" class="muted">—</p>
-      <canvas id="annotationCanvas"></canvas>
-      <button id="saveAnnotated" class="primary wide">Save annotated chart</button>
-    </article>
-  </section>
 </main>
 
 <footer><span>AI Market Analyzer Pro · deterministic research engine</span><span>Data is read-only. Levels are analytical estimates, not guarantees.</span></footer>
-<script src="script.js?v=20260926-01" defer></script>
+<script src="script.js?v=20260926-02" defer></script>
 </body>
 </html>
