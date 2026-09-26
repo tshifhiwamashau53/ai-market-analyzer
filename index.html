@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260926-06">
+<link rel="stylesheet" href="style.css?v=20260926-07">
 </head>
 <body>
 <header class="topbar">
@@ -64,7 +64,7 @@
     <section class="live-charts">
       <div class="section-head">
         <div><p class="eyebrow">LIVE MARKET CHARTS</p><h2>TradingView</h2></div>
-        <span class="stamp">LIVE FEED · READ-ONLY</span>
+        <span class="stamp">LIVE · READ-ONLY</span>
       </div>
       <div class="asset-tabs" role="tablist" aria-label="Market chart">
         <button type="button" class="asset-tab active" data-chart-asset="XAUUSD" role="tab" aria-selected="true">XAUUSD</button>
@@ -77,19 +77,18 @@
         </div>
         <div id="tradingview-selected" class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>
       </article>
-      <p class="chart-note">The charts are supplied by TradingView. The AI analysis uses synchronized OHLC market data for the same instruments and selected timeframe; it does not pretend to read pixels from the embedded TradingView iframe.</p>
     </section>
 
     <section class="control-card chart-analysis-controls">
       <div class="control-grid">
-        <label>EXECUTION TIMEFRAME<select id="timeframe">
+        <label>TIMEFRAME<select id="timeframe">
           <option value="5m">5 MIN</option><option value="15m" selected>15 MIN</option><option value="1h">1 HOUR</option>
         </select></label>
         <label>ANALYSIS DEPTH<select id="depth">
           <option value="standard">STANDARD</option><option value="deep" selected>DEEP</option>
         </select></label>
       </div>
-      <button id="analyzeMarket" class="primary chart-analyze-button">Analyze Market <span>↗</span></button>
+      <button id="analyzeMarket" class="primary chart-analyze-button">ANALYZE MARKET <span>↗</span></button>
     </section>
 
     <section class="dashboard" id="dashboard">
@@ -134,6 +133,6 @@
 </main>
 
 <footer><span>AI Market Analyzer Pro · read-only research</span><span>Levels are analytical reference areas, not guarantees.</span></footer>
-<script src="script.js?v=20260926-06" defer></script>
+<script src="script.js?v=20260926-07" defer></script>
 </body>
 </html>
