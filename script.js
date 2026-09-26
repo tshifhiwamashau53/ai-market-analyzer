@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-const state={asset:'XAUUSD',timeframe:'15m',markets:{},current:null,image:null,visual:null};
+const state={asset:'XAUUSD',timeframe:'15m',markets:{},current:null,ai:null};
 
 const fmt=v=>{const n=Number(v);if(!Number.isFinite(n))return '—';if(Math.abs(n)>=1000)return n.toLocaleString(undefined,{maximumFractionDigits:2});if(Math.abs(n)>=100)return n.toFixed(2);if(Math.abs(n)>=1)return n.toFixed(4);return n.toFixed(6)};
 const pct=v=>Number.isFinite(Number(v))?(Number(v)>=0?'+':'')+Number(v).toFixed(2)+'%':'—';
@@ -52,58 +52,10 @@ function renderMain(m,setup){
  const candle=readCandles(m); const candleText=candle?('Latest candle: '+candle.pattern+'. Previous: '+candle.prevPattern+'.'+(candle.engulfBull?' Bullish engulfing detected.':'')+(candle.engulfBear?' Bearish engulfing detected.':'')):'Candle data unavailable.'; const reasons=[candleText,'HTF alignment: '+setup.bias+'.','EMA structure: '+(i.structure||'neutral')+'; EMA20 '+fmt(i.ema20)+', EMA50 '+fmt(i.ema50)+'.','Momentum: '+(m.momentum||'mixed')+'; RSI14 '+(Number.isFinite(i.rsi14)?i.rsi14.toFixed(1):'—')+'.','POC reference: '+fmt(m.poc)+'; current reference: '+fmt(m.price)+'.','ATR volatility: '+fmt(i.atr14)+'; recent support '+fmt(i.support)+', resistance '+fmt(i.resistance)+'.'];$('reasoning').innerHTML=reasons.map(x=>'<li>'+esc(x)+'</li>').join('')
 }
 function apiBase(){return '/api/'}
-function analysisImage(){
-  const img=$('chartPreview');
-  if(!img?.naturalWidth) return null;
-  const max=1400, scale=Math.min(1,max/img.naturalWidth), w=Math.max(1,Math.round(img.naturalWidth*scale)), h=Math.max(1,Math.round(img.naturalHeight*scale));
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const x=c.getContext('2d'); x.drawImage(img,0,0,w,h);
-  return c.toDataURL('image/jpeg',0.78);
-}
-async function runAIAnalysis(){
-  const payload={asset:state.asset,timeframe:state.timeframe,depth:$('depth')?.value||'deep',markets:state.markets,visualAnalysis:state.visual,strategy:'NONE — use pure technical analysis: market structure, candle-by-candle price action, support/resistance, trend, momentum, volatility, and multi-timeframe context. Identify candle patterns such as doji, hammer, shooting star, engulfing, pin bar, inside bar and strong momentum candles. Explain the evidence for bullish, bearish or neutral direction. Classify the actionable state as BUY AREA, SELL AREA, WAIT, or NO TRADE. Provide conditional entry/reference levels, invalidation and targets only when supported by the data. Do not use the old accumulation/volume-profile/breakout strategy.'};
-  const image=analysisImage(); if(image) payload.image=image;
-  try{
-    set('apiMode','ENGINE — AI TECHNICAL + FUNDAMENTAL ANALYSIS'); status(true,'AI CONNECTED');
-    const r=await fetch(apiBase()+'analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const j=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(j.error||'OpenAI analysis unavailable');
-    const a=j.analysis||{};
-    if(a.market_state) set('marketState',a.market_state==='WAIT'?'WAIT / NEUTRAL':a.market_state+' CONTEXT');
-    if(a.higher_timeframe_bias) set('bias',a.higher_timeframe_bias);
-    if(a.summary) set('biasReason',a.summary);
-    if(Number.isFinite(Number(a.analysis_quality))){const q=Math.max(0,Math.min(100,Number(a.analysis_quality)));set('quality',Math.round(q)+' / 100');$('qualityBar').style.width=q+'%';}
-    if(a.setup_stage) set('setupState',a.setup_stage); if(a.action_state) set('actionState',a.action_state); if(a.candle_reading) set('lastCandle',a.candle_reading); if(a.entry_plan) set('entryPlan',a.entry_plan); if(a.action_reason) set('actionReason',a.action_reason); if(a.reference_level!==null&&a.reference_level!==undefined) set('support',fmt(a.reference_level)); if(a.invalidation_level!==null&&a.invalidation_level!==undefined) set('resistance',fmt(a.invalidation_level));
-    if(a.poc!==null&&a.poc!==undefined) set('poc',fmt(a.poc));
-    const reasons=[a.candle_reading?'Candle reading: '+a.candle_reading:'',a.direction_reason?'Direction: '+a.direction_reason:'',a.action_reason?'Action timing: '+a.action_reason:'',a.entry_plan?'Entry plan: '+a.entry_plan:'',a.news_assessment?'News assessment: '+a.news_assessment:'',...(Array.isArray(a.reasoning)?a.reasoning:[]),a.waiting_for?'Waiting for: '+a.waiting_for:'',a.data_quality?'Data quality: '+a.data_quality:''].filter(Boolean);
-    if(reasons.length) $('reasoning').innerHTML=reasons.slice(0,8).map(x=>'<li>'+esc(x)+'</li>').join('');
-    state.ai=a; set('analyzedAt',new Date().toLocaleTimeString());
-  }catch(e){
-    set('apiMode','ENGINE — LOCAL FALLBACK');
-    const li=$('reasoning'); if(li) li.innerHTML += '<li>OpenAI layer unavailable: '+esc(e.message)+'</li>';
-    status(true,'MARKET DATA');
-  }
-}
 async function loadMacro(){try{const [news,cal]=await Promise.all([getJson(basePath()+'api/news?asset='+encodeURIComponent(state.asset)),getJson(basePath()+'api/calendar')]);const count=(news.items||[]).length+(cal.events||[]).length,risk=count>=8?'HIGH':count>=3?'MEDIUM':'LOW';set('macroRisk',risk);$('macro').innerHTML=(news.items||[]).slice(0,4).map(x=>'<div><b>'+esc(x.title)+'</b><br><small>'+esc(x.source||'News')+' · '+esc(x.pubDate||'')+'</small></div>').join('')||'No recent headlines returned.'}catch(e){set('macroRisk','UNAVAILABLE');$('macro').textContent='Macro feeds are unavailable. Technical analysis can still run from market data.'}}
 async function analyzeMarket(){
  const btn=$('analyzeMarket');btn.disabled=true;btn.innerHTML='Analyzing…';status(false,'LOADING');state.asset=$('asset').value;state.timeframe=$('timeframe').value;
  try{const tfs=['4h','1h','15m','5m'],loaded=await Promise.allSettled(tfs.map(loadMarket));state.markets={};loaded.forEach((r,i)=>{if(r.status==='fulfilled')state.markets[tfs[i]]=r.value});const m=state.markets[state.timeframe]||state.markets['15m']||state.markets['5m']||state.markets['1h']||state.markets['4h'];if(!m)throw new Error('No verified market-data endpoint is reachable. GitHub Pages is static, so the live API must be deployed separately.');state.current=m;const setup=classifyStages(state.markets['4h'],state.markets['1h'],state.markets['15m'],state.markets['5m']);renderTimeframes();renderMain(m,setup);await loadMacro();await runAIAnalysis();status(true,'LIVE + AI')}catch(e){status(false,'DATA OFFLINE');set('marketState','DATA UNAVAILABLE');set('bias','NEUTRAL');set('biasReason',e.message);set('dataSource','DATA SOURCE — unavailable')}finally{btn.disabled=false;btn.innerHTML='Analyze Market <span>↗</span>'}
 }
 
-function visualDetect(img){
- const max=1500,s=Math.min(1,max/img.naturalWidth),w=Math.max(1,Math.round(img.naturalWidth*s)),h=Math.max(1,Math.round(img.naturalHeight*s)),c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0,w,h);const d=x.getImageData(0,0,w,h).data;let bull=0,bear=0,top=h,bottom=0;
- for(let y=0;y<h;y++)for(let xx=0;xx<w*.84;xx++){const i=(y*w+xx)*4,r=d[i],g=d[i+1],b=d[i+2];if(g>90&&g>r*1.15&&g>b*1.03&&g-r>18){bull++;top=Math.min(top,y);bottom=Math.max(bottom,y)}else if(r>100&&r>g*1.18&&r>b*1.08&&r-g>20){bear++;top=Math.min(top,y);bottom=Math.max(bottom,y)}}
- const total=bull+bear,bias=total<30?'NEUTRAL':bull>bear*1.18?'BULLISH':bear>bull*1.18?'BEARISH':'NEUTRAL';return {available:total>=30,bias,bull,bear,width:w,height:h,top,bottom}
-}
-function drawAnnotation(v){
- const img=$('chartPreview'),canvas=$('annotationCanvas');if(!img?.naturalWidth||!v)return;const s=Math.min(1,1800/img.naturalWidth),w=Math.round(img.naturalWidth*s),h=Math.round(img.naturalHeight*s);canvas.width=w;canvas.height=h;const c=canvas.getContext('2d');c.drawImage(img,0,0,w,h);const x0=w*.05,x1=w*.88,y=(v.top+v.bottom)/2;
- c.save();c.setLineDash([10,7]);c.lineWidth=3;c.strokeStyle=v.bias==='BULLISH'?'#176b4e':v.bias==='BEARISH'?'#a63f4c':'#176a9b';c.beginPath();c.moveTo(x0,y);c.lineTo(x1,y);c.stroke();c.setLineDash([]);c.fillStyle='rgba(20,25,29,.9)';c.fillRect(14,14,220,36);c.fillStyle='#fff';c.font='800 16px Inter,Arial';c.fillText(v.bias==='NEUTRAL'?'WAIT / NEUTRAL':v.bias+' VISUAL BIAS',25,38);
- if(v.bias!=='NEUTRAL'){const spread=Math.max(24,(v.bottom-v.top)*.18),entry=y,sl=v.bias==='BULLISH'?y+spread:y-spread,tp1=v.bias==='BULLISH'?y-spread*1.8:y+spread*1.8,tp2=v.bias==='BULLISH'?y-spread*2.7:y+spread*2.7;drawLine(entry,'REFERENCE','#176a9b');drawLine(sl,'INVALIDATION','#a63f4c');drawLine(tp1,'TARGET 1','#176b4e');drawLine(tp2,'TARGET 2','#176b4e')}
- c.restore();function drawLine(yy,label,col){c.save();c.strokeStyle=col;c.lineWidth=2;c.setLineDash([7,7]);c.beginPath();c.moveTo(x0,yy);c.lineTo(x1,yy);c.stroke();c.setLineDash([]);c.fillStyle=col;c.fillRect(x0,yy-13,105,24);c.fillStyle='#fff';c.font='700 10px Inter,Arial';c.fillText(label,x0+7,yy+3);c.restore()}$('annotationPanel').hidden=false;state.annotationData=canvas.toDataURL('image/png')
-}
-function analyzeScreenshot(){const img=$('chartPreview');if(!img?.naturalWidth)return;const v=visualDetect(img);state.visual=v;set('visualState',v.bias);set('visualReason',v.available?'Detected '+v.bull+' bullish-colour pixels and '+v.bear+' bearish-colour pixels. This is a visual proxy, not price OCR.':'Not enough reliable candle-colour pixels were detected.');drawAnnotation(v)}
-function setupUpload(){
- const input=$('chartInput'),preview=$('chartPreview');input.addEventListener('change',()=>{const f=input.files?.[0];if(!f)return;if(!f.type.startsWith('image/')){alert('Choose a chart image.');return}if(f.size>25*1024*1024){alert('Choose an image smaller than 25 MB.');return}const r=new FileReader();r.onload=()=>{preview.onload=()=>{$('previewWrap').hidden=false;$('dropzone').hidden=true;$('analyzeChart').disabled=false;analyzeScreenshot()};preview.src=r.result};r.readAsDataURL(f)});
- $('removeImage').addEventListener('click',()=>{input.value='';preview.src='';$('previewWrap').hidden=true;$('dropzone').hidden=false;$('analyzeChart').disabled=true;$('annotationPanel').hidden=true});$('analyzeChart').addEventListener('click',analyzeScreenshot);$('saveOriginal').addEventListener('click',()=>{if(!preview.src)return;const a=document.createElement('a');a.href=preview.src;a.download='chart-original.png';a.click()});$('saveAnnotated').addEventListener('click',()=>{if(!state.annotationData)analyzeScreenshot();if(!state.annotationData)return;const a=document.createElement('a');a.href=state.annotationData;a.download='chart-analysis.png';a.click()})
-}
-document.addEventListener('DOMContentLoaded',()=>{setupUpload();$('asset').addEventListener('change',()=>{state.asset=$('asset').value});$('timeframe').addEventListener('change',()=>{state.timeframe=$('timeframe').value});$('analyzeMarket').addEventListener('click',analyzeMarket);analyzeMarket()});
+document.addEventListener('DOMContentLoaded',()=>{$('asset').addEventListener('change',()=>{state.asset=$('asset').value});$('timeframe').addEventListener('change',()=>{state.timeframe=$('timeframe').value});$('analyzeMarket').addEventListener('click',analyzeMarket);analyzeMarket()});
