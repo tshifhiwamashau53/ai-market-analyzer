@@ -24,7 +24,7 @@ async def advanced(symbol: str, execution_timeframe: str = "15m"):
         ])
     except Exception as exc:
         raise HTTPException(502, f"Advanced market data unavailable: {exc}")
-    snaps = [snapshot(df, tf) for tf, df in zip(frames, data)]
+    data[0] = data[0].resample("4h").agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"}).dropna()\n    snaps = [snapshot(df, tf) for tf, df in zip(frames, data)]
     higher = snaps[0].direction
     result = evaluate(data[2], higher)
     current = snaps[2].price
