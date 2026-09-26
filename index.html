@@ -31,16 +31,17 @@
       <div><p class="eyebrow">LIVE MARKET CHARTS</p><h2>TradingView</h2></div>
       <span class="stamp">LIVE FEED · READ-ONLY</span>
     </div>
-    <div class="chart-grid">
-      <article class="panel chart-panel">
-        <div class="panel-head"><div><span class="eyebrow">BTCUSD</span><h3>Bitcoin / US Dollar</h3></div><span class="pill">LIVE</span></div>
-        <div id="tradingview-btc" class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>
-      </article>
-      <article class="panel chart-panel">
-        <div class="panel-head"><div><span class="eyebrow">XAUUSD</span><h3>Gold / US Dollar</h3></div><span class="pill">LIVE</span></div>
-        <div id="tradingview-xau" class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>
-      </article>
+    <div class="asset-tabs" role="tablist" aria-label="Market chart">
+      <button type="button" class="asset-tab active" data-chart-asset="XAUUSD" role="tab" aria-selected="true">XAUUSD</button>
+      <button type="button" class="asset-tab" data-chart-asset="BTCUSD" role="tab" aria-selected="false">BTCUSD</button>
     </div>
+    <article class="panel chart-panel selected-chart">
+      <div class="panel-head">
+        <div><span class="eyebrow" id="chartAssetEyebrow">XAUUSD</span><h3 id="chartAssetTitle">Gold / US Dollar</h3></div>
+        <span class="pill">LIVE</span>
+      </div>
+      <div id="tradingview-selected" class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>
+    </article>
     <p class="chart-note">The charts are supplied by TradingView. The AI analysis uses synchronized OHLC market data for the same instruments and selected timeframe; it does not pretend to read pixels from the embedded TradingView iframe.</p>
   </section>
 
