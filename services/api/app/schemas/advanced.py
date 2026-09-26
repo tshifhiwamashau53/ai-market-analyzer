@@ -27,12 +27,11 @@ class StrategyAssessment(BaseModel):
     targets: list[float] = Field(default_factory=list)
     invalidation: float | None = None
     risk_reward: float | None = None
+    waiting_for: list[str] = Field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
     range_high: float | None = None
     range_low: float | None = None
     poc: float | None = None
-    breakout_level: float | None = None
-    waiting_for: list[str] = Field(default_factory=list)
-    reasons: list[str] = Field(default_factory=list)
 
 class AdvancedAnalysisResponse(BaseModel):
     symbol: str
