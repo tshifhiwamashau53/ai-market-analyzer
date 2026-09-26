@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260926-05">
+<link rel="stylesheet" href="style.css?v=20260926-06">
 </head>
 <body>
 <header class="topbar">
@@ -50,98 +50,99 @@
     </article>
     <p class="chart-note">Performance is calculated from signals recorded by this analyzer. It does not represent guaranteed future results. Historical records are stored in this browser.</p>
   </section>
+
   <section id="analyzerPage">
-  <div class="page-divider"><span>MARKET ANALYSIS</span><i></i></div>
-  <section class="hero">
-    <div>
-      <p class="eyebrow">LIVE MARKET RESEARCH</p>
-      <h1>Market context.<br><span>One clean view.</span></h1>
-      <p class="hero-copy">Live TradingView charts for BTCUSD and XAUUSD, synchronized market data, multi-timeframe technical analysis, news, fundamentals and AI reasoning.</p>
-    </div>
-  </section>
-
-  <section class="live-charts">
-    <div class="section-head">
-      <div><p class="eyebrow">LIVE MARKET CHARTS</p><h2>TradingView</h2></div>
-      <span class="stamp">LIVE FEED · READ-ONLY</span>
-    </div>
-    <div class="asset-tabs" role="tablist" aria-label="Market chart">
-      <button type="button" class="asset-tab active" data-chart-asset="XAUUSD" role="tab" aria-selected="true">XAUUSD</button>
-      <button type="button" class="asset-tab" data-chart-asset="BTCUSD" role="tab" aria-selected="false">BTCUSD</button>
-    </div>
-    <article class="panel chart-panel selected-chart">
-      <div class="panel-head">
-        <div><span class="eyebrow" id="chartAssetEyebrow">XAUUSD</span><h3 id="chartAssetTitle">Gold / US Dollar</h3></div>
-        <span class="pill">LIVE</span>
+    <div class="page-divider"><span>MARKET ANALYSIS</span><i></i></div>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">LIVE MARKET RESEARCH</p>
+        <h1>Market context.<br><span>One clean view.</span></h1>
+        <p class="hero-copy">Live TradingView charts for BTCUSD and XAUUSD, synchronized market data, multi-timeframe technical analysis, news, fundamentals and AI reasoning.</p>
       </div>
-      <div id="tradingview-selected" class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>
-    </article>
-    <p class="chart-note">The charts are supplied by TradingView. The AI analysis uses synchronized OHLC market data for the same instruments and selected timeframe; it does not pretend to read pixels from the embedded TradingView iframe.</p>
-  </section>
+    </section>
 
-  <section class="control-card">
-    <div class="control-grid">
-      <label>ASSET<select id="asset">
-        <option value="XAUUSD">XAUUSD</option>
-        <option value="BTCUSD">BTCUSD</option>
-      </select></label>
-      <label>EXECUTION TIMEFRAME<select id="timeframe">
-        <option value="5m">5 MIN</option><option value="15m" selected>15 MIN</option><option value="1h">1 HOUR</option>
-      </select></label>
-      <label>ANALYSIS DEPTH<select id="depth">
-        <option value="standard">STANDARD</option><option value="deep" selected>DEEP</option>
-      </select></label>
-      <button id="analyzeMarket" class="primary">Analyze Market <span>↗</span></button>
-    </div>
-    <div class="data-strip">
-      <span id="dataSource">DATA SOURCE — waiting</span>
-      <span id="dataAge">LAST UPDATE — —</span>
-      <span id="apiMode">ENGINE — LOCAL RULES</span>
-    </div>
-  </section>
-
-  <section class="dashboard" id="dashboard">
-    <div class="section-head"><div><p class="eyebrow">MARKET STATE</p><h2 id="marketState">WAITING</h2></div><div class="stamp" id="analyzedAt">—</div></div>
-    <div class="state-grid">
-      <article class="metric-card state-card"><span class="label">DIRECTIONAL BIAS</span><strong id="bias">NEUTRAL</strong><p id="biasReason">Run an analysis to evaluate current market structure.</p></article>
-      <article class="metric-card"><span class="label">SIGNAL QUALITY</span><strong id="quality">—</strong><div class="meter"><i id="qualityBar"></i></div><p id="qualityNote">Confluence, not a probability of success.</p></article>
-      <article class="metric-card"><span class="label">CURRENT REFERENCE</span><strong id="price">—</strong><p id="change">—</p></article>
-    </div>
-
-    <div class="grid-2">
-      <article class="panel">
-        <div class="panel-head"><div><span class="eyebrow">MULTI-TIMEFRAME</span><h3>Trend alignment</h3></div></div>
-        <div class="timeframes" id="timeframes">
-          <div><span>4H</span><b>—</b><small>waiting</small></div><div><span>1H</span><b>—</b><small>waiting</small></div><div><span>15M</span><b>—</b><small>waiting</small></div><div><span>5M</span><b>—</b><small>waiting</small></div>
-        </div>
-      </article>
-      <article class="panel">
-        <div class="panel-head"><div><span class="eyebrow">TECHNICAL CORE</span><h3>Indicators</h3></div></div>
-        <div class="indicator-grid" id="indicators">
-          <div><span>EMA 20</span><b>—</b></div><div><span>EMA 50</span><b>—</b></div><div><span>RSI 14</span><b>—</b></div><div><span>ATR 14</span><b>—</b></div><div><span>VWAP</span><b>—</b></div><div><span>STRUCTURE</span><b>—</b></div>
-        </div>
-      </article>
-    </div>
-
-    <article class="panel strategy-panel"><div class="panel-head"><div><span class="eyebrow">PRICE ACTION</span><h3>Candle & structure reading</h3></div><span class="pill">TECHNICAL</span></div><div class="context-grid"><div><span>ACTION</span><b id="actionState">WAIT</b></div><div><span>LAST CANDLE</span><b id="lastCandle">—</b></div><div><span>PREVIOUS</span><b id="previousCandle">—</b></div><div><span>ENTRY PLAN</span><b id="entryPlan">Wait for analysis</b></div></div><p id="actionReason" class="muted">The engine reads verified OHLC candles. OpenAI adds deeper technical reasoning and current fundamental/news context when configured.</p></article>
-
-    <article class="panel strategy-panel">
-      <div class="panel-head"><div><span class="eyebrow">TECHNICAL ANALYSIS</span><h3>Market structure & price action</h3></div><span class="pill" id="setupState">WAITING</span></div>
-      <div class="stage-flow" id="stageFlow">
-        <div><b>01</b><span>MARKET STRUCTURE</span><strong>READ</strong></div><div><b>02</b><span>SWING RANGE</span><strong>READ</strong></div><div><b>03</b><span>SUPPORT / RESISTANCE</span><strong>READ</strong></div><div><b>04</b><span>MOMENTUM</span><strong>READ</strong></div><div><b>05</b><span>CANDLE CONFIRMATION</span><strong>READ</strong></div>
+    <section class="live-charts">
+      <div class="section-head">
+        <div><p class="eyebrow">LIVE MARKET CHARTS</p><h2>TradingView</h2></div>
+        <span class="stamp">LIVE FEED · READ-ONLY</span>
       </div>
-      <div class="context-grid"><div><span>POC</span><b id="poc">Not used</b></div><div><span>SUPPORT</span><b id="support">—</b></div><div><span>RESISTANCE</span><b id="resistance">—</b></div><div><span>VOLATILITY</span><b id="volatility">—</b></div></div>
-    </article>
+      <div class="asset-tabs" role="tablist" aria-label="Market chart">
+        <button type="button" class="asset-tab active" data-chart-asset="XAUUSD" role="tab" aria-selected="true">XAUUSD</button>
+        <button type="button" class="asset-tab" data-chart-asset="BTCUSD" role="tab" aria-selected="false">BTCUSD</button>
+      </div>
+      <article class="panel chart-panel selected-chart">
+        <div class="panel-head">
+          <div><span class="eyebrow" id="chartAssetEyebrow">XAUUSD</span><h3 id="chartAssetTitle">Gold / US Dollar</h3></div>
+          <span class="pill">LIVE</span>
+        </div>
+        <div id="tradingview-selected" class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>
+      </article>
+      <p class="chart-note">The charts are supplied by TradingView. The AI analysis uses synchronized OHLC market data for the same instruments and selected timeframe; it does not pretend to read pixels from the embedded TradingView iframe.</p>
+    </section>
 
-    <div class="grid-2">
-      <article class="panel"><div class="panel-head"><div><span class="eyebrow">ANALYSIS</span><h3>Why the engine reached this state</h3></div></div><ul class="reasoning" id="reasoning"><li>Waiting for verified market data.</li></ul></article>
-      <article class="panel"><div class="panel-head"><div><span class="eyebrow">MACRO CONTEXT</span><h3>News & events</h3></div><span class="pill" id="macroRisk">UNKNOWN</span></div><div id="macro" class="macro">No market context loaded yet.</div></article>
-    </div>
-  </section>
+    <section class="control-card">
+      <div class="control-grid">
+        <label>ASSET<select id="asset">
+          <option value="XAUUSD">XAUUSD</option>
+          <option value="BTCUSD">BTCUSD</option>
+        </select></label>
+        <label>EXECUTION TIMEFRAME<select id="timeframe">
+          <option value="5m">5 MIN</option><option value="15m" selected>15 MIN</option><option value="1h">1 HOUR</option>
+        </select></label>
+        <label>ANALYSIS DEPTH<select id="depth">
+          <option value="standard">STANDARD</option><option value="deep" selected>DEEP</option>
+        </select></label>
+        <button id="analyzeMarket" class="primary">Analyze Market <span>↗</span></button>
+      </div>
+      <div class="data-strip">
+        <span id="dataSource">DATA SOURCE — waiting</span>
+        <span id="dataAge">LAST UPDATE — —</span>
+        <span id="apiMode">ENGINE — LOCAL RULES</span>
+      </div>
+    </section>
+
+    <section class="dashboard" id="dashboard">
+      <div class="section-head"><div><p class="eyebrow">MARKET STATE</p><h2 id="marketState">WAITING</h2></div><div class="stamp" id="analyzedAt">—</div></div>
+      <div class="state-grid">
+        <article class="metric-card state-card"><span class="label">DIRECTIONAL BIAS</span><strong id="bias">NEUTRAL</strong><p id="biasReason">Run an analysis to evaluate current market structure.</p></article>
+        <article class="metric-card"><span class="label">SIGNAL QUALITY</span><strong id="quality">—</strong><div class="meter"><i id="qualityBar"></i></div><p id="qualityNote">Confluence, not a probability of success.</p></article>
+        <article class="metric-card"><span class="label">CURRENT REFERENCE</span><strong id="price">—</strong><p id="change">—</p></article>
+      </div>
+
+      <div class="grid-2">
+        <article class="panel">
+          <div class="panel-head"><div><span class="eyebrow">MULTI-TIMEFRAME</span><h3>Trend alignment</h3></div></div>
+          <div class="timeframes" id="timeframes">
+            <div><span>4H</span><b>—</b><small>waiting</small></div><div><span>1H</span><b>—</b><small>waiting</small></div><div><span>15M</span><b>—</b><small>waiting</small></div><div><span>5M</span><b>—</b><small>waiting</small></div>
+          </div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><div><span class="eyebrow">TECHNICAL CORE</span><h3>Indicators</h3></div></div>
+          <div class="indicator-grid" id="indicators">
+            <div><span>EMA 20</span><b>—</b></div><div><span>EMA 50</span><b>—</b></div><div><span>RSI 14</span><b>—</b></div><div><span>ATR 14</span><b>—</b></div><div><span>VWAP</span><b>—</b></div><div><span>STRUCTURE</span><b>—</b></div>
+          </div>
+        </article>
+      </div>
+
+      <article class="panel strategy-panel"><div class="panel-head"><div><span class="eyebrow">PRICE ACTION</span><h3>Candle & structure reading</h3></div><span class="pill">TECHNICAL</span></div><div class="context-grid"><div><span>ACTION</span><b id="actionState">WAIT</b></div><div><span>LAST CANDLE</span><b id="lastCandle">—</b></div><div><span>PREVIOUS</span><b id="previousCandle">—</b></div><div><span>ENTRY PLAN</span><b id="entryPlan">Wait for analysis</b></div></div><p id="actionReason" class="muted">The engine reads verified OHLC candles. OpenAI adds deeper technical reasoning and current fundamental/news context when configured.</p></article>
+
+      <article class="panel strategy-panel">
+        <div class="panel-head"><div><span class="eyebrow">TECHNICAL ANALYSIS</span><h3>Market structure & price action</h3></div><span class="pill" id="setupState">WAITING</span></div>
+        <div class="stage-flow" id="stageFlow">
+          <div><b>01</b><span>MARKET STRUCTURE</span><strong>READ</strong></div><div><b>02</b><span>SWING RANGE</span><strong>READ</strong></div><div><b>03</b><span>SUPPORT / RESISTANCE</span><strong>READ</strong></div><div><b>04</b><span>MOMENTUM</span><strong>READ</strong></div><div><b>05</b><span>CANDLE CONFIRMATION</span><strong>READ</strong></div>
+        </div>
+        <div class="context-grid"><div><span>POC</span><b id="poc">Not used</b></div><div><span>SUPPORT</span><b id="support">—</b></div><div><span>RESISTANCE</span><b id="resistance">—</b></div><div><span>VOLATILITY</span><b id="volatility">—</b></div></div>
+      </article>
+
+      <div class="grid-2">
+        <article class="panel"><div class="panel-head"><div><span class="eyebrow">ANALYSIS</span><h3>Why the engine reached this state</h3></div></div><ul class="reasoning" id="reasoning"><li>Waiting for verified market data.</li></ul></article>
+        <article class="panel"><div class="panel-head"><div><span class="eyebrow">MACRO CONTEXT</span><h3>News & events</h3></div><span class="pill" id="macroRisk">UNKNOWN</span></div><div id="macro" class="macro">No market context loaded yet.</div></article>
+      </div>
+    </section>
   </section>
 </main>
 
 <footer><span>AI Market Analyzer Pro · read-only research</span><span>Levels are analytical reference areas, not guarantees.</span></footer>
-<script src="script.js?v=20260926-05" defer></script>
+<script src="script.js?v=20260926-06" defer></script>
 </body>
 </html>
