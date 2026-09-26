@@ -35,10 +35,43 @@ function renderMain(m,setup){
  set('dataSource','DATA SOURCE — '+(m.provider||'market API'));const age=m.timestamp?Math.max(0,(Date.now()-new Date(m.timestamp).getTime())/1000):null;set('dataAge',age!==null?'LAST UPDATE — '+Math.round(age)+'s AGO':'LAST UPDATE — —');set('apiMode','ENGINE — DETERMINISTIC TECHNICAL RULES');set('analyzedAt',new Date().toLocaleTimeString());
  const reasons=['HTF alignment: '+setup.bias+'.','EMA structure: '+(i.structure||'neutral')+'; EMA20 '+fmt(i.ema20)+', EMA50 '+fmt(i.ema50)+'.','Momentum: '+(m.momentum||'mixed')+'; RSI14 '+(Number.isFinite(i.rsi14)?i.rsi14.toFixed(1):'—')+'.','POC reference: '+fmt(m.poc)+'; current reference: '+fmt(m.price)+'.','ATR volatility: '+fmt(i.atr14)+'; recent support '+fmt(i.support)+', resistance '+fmt(i.resistance)+'.'];$('reasoning').innerHTML=reasons.map(x=>'<li>'+esc(x)+'</li>').join('')
 }
+function apiBase(){return '/api/'}
+function analysisImage(){
+  const img=$('chartPreview');
+  if(!img?.naturalWidth) return null;
+  const max=1400, scale=Math.min(1,max/img.naturalWidth), w=Math.max(1,Math.round(img.naturalWidth*scale)), h=Math.max(1,Math.round(img.naturalHeight*scale));
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const x=c.getContext('2d'); x.drawImage(img,0,0,w,h);
+  return c.toDataURL('image/jpeg',0.78);
+}
+async function runAIAnalysis(){
+  const payload={asset:state.asset,timeframe:state.timeframe,depth:$('depth')?.value||'deep',markets:state.markets,visualAnalysis:state.visual,strategy:'Higher-timeframe bias -> accumulation -> volume profile/POC -> breakout -> pullback to POC -> continuation'};
+  const image=analysisImage(); if(image) payload.image=image;
+  try{
+    set('apiMode','ENGINE — OPENAI + TECHNICAL DATA'); status(true,'AI CONNECTED');
+    const r=await fetch(apiBase()+'analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.error||'OpenAI analysis unavailable');
+    const a=j.analysis||{};
+    if(a.market_state) set('marketState',a.market_state==='WAIT'?'WAIT / NEUTRAL':a.market_state+' CONTEXT');
+    if(a.higher_timeframe_bias) set('bias',a.higher_timeframe_bias);
+    if(a.summary) set('biasReason',a.summary);
+    if(Number.isFinite(Number(a.analysis_quality))){const q=Math.max(0,Math.min(100,Number(a.analysis_quality)));set('quality',Math.round(q)+' / 100');$('qualityBar').style.width=q+'%';}
+    if(a.setup_stage) set('setupState',a.setup_stage);
+    if(a.poc!==null&&a.poc!==undefined) set('poc',fmt(a.poc));
+    const reasons=[...(Array.isArray(a.reasoning)?a.reasoning:[]),a.waiting_for?'Waiting for: '+a.waiting_for:'',a.data_quality?'Data quality: '+a.data_quality:''].filter(Boolean);
+    if(reasons.length) $('reasoning').innerHTML=reasons.slice(0,8).map(x=>'<li>'+esc(x)+'</li>').join('');
+    state.ai=a; set('analyzedAt',new Date().toLocaleTimeString());
+  }catch(e){
+    set('apiMode','ENGINE — LOCAL FALLBACK');
+    const li=$('reasoning'); if(li) li.innerHTML += '<li>OpenAI layer unavailable: '+esc(e.message)+'</li>';
+    status(true,'MARKET DATA');
+  }
+}
 async function loadMacro(){try{const [news,cal]=await Promise.all([getJson(basePath()+'api/news?asset='+encodeURIComponent(state.asset)),getJson(basePath()+'api/calendar')]);const count=(news.items||[]).length+(cal.events||[]).length,risk=count>=8?'HIGH':count>=3?'MEDIUM':'LOW';set('macroRisk',risk);$('macro').innerHTML=(news.items||[]).slice(0,4).map(x=>'<div><b>'+esc(x.title)+'</b><br><small>'+esc(x.source||'News')+' · '+esc(x.pubDate||'')+'</small></div>').join('')||'No recent headlines returned.'}catch(e){set('macroRisk','UNAVAILABLE');$('macro').textContent='Macro feeds are unavailable. Technical analysis can still run from market data.'}}
 async function analyzeMarket(){
  const btn=$('analyzeMarket');btn.disabled=true;btn.innerHTML='Analyzing…';status(false,'LOADING');state.asset=$('asset').value;state.timeframe=$('timeframe').value;
- try{const tfs=['4h','1h','15m','5m'],loaded=await Promise.allSettled(tfs.map(loadMarket));state.markets={};loaded.forEach((r,i)=>{if(r.status==='fulfilled')state.markets[tfs[i]]=r.value});const m=state.markets[state.timeframe]||state.markets['15m']||state.markets['5m']||state.markets['1h']||state.markets['4h'];if(!m)throw new Error('No verified market-data endpoint is reachable. GitHub Pages is static, so the live API must be deployed separately.');state.current=m;const setup=classifyStages(state.markets['4h'],state.markets['1h'],state.markets['15m'],state.markets['5m']);renderTimeframes();renderMain(m,setup);await loadMacro();status(true,'LIVE DATA')}catch(e){status(false,'DATA OFFLINE');set('marketState','DATA UNAVAILABLE');set('bias','NEUTRAL');set('biasReason',e.message);set('dataSource','DATA SOURCE — unavailable')}finally{btn.disabled=false;btn.innerHTML='Analyze Market <span>↗</span>'}
+ try{const tfs=['4h','1h','15m','5m'],loaded=await Promise.allSettled(tfs.map(loadMarket));state.markets={};loaded.forEach((r,i)=>{if(r.status==='fulfilled')state.markets[tfs[i]]=r.value});const m=state.markets[state.timeframe]||state.markets['15m']||state.markets['5m']||state.markets['1h']||state.markets['4h'];if(!m)throw new Error('No verified market-data endpoint is reachable. GitHub Pages is static, so the live API must be deployed separately.');state.current=m;const setup=classifyStages(state.markets['4h'],state.markets['1h'],state.markets['15m'],state.markets['5m']);renderTimeframes();renderMain(m,setup);await loadMacro();await runAIAnalysis();status(true,'LIVE + AI')}catch(e){status(false,'DATA OFFLINE');set('marketState','DATA UNAVAILABLE');set('bias','NEUTRAL');set('biasReason',e.message);set('dataSource','DATA SOURCE — unavailable')}finally{btn.disabled=false;btn.innerHTML='Analyze Market <span>↗</span>'}
 }
 
 function visualDetect(img){
