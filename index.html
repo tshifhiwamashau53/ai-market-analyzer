@@ -19,43 +19,68 @@
 
 <main class="container">
 
-  <!-- VISUAL ANALYSIS IS INTENTIONALLY THE FIRST CONTENT BLOCK -->
-  <section class="upload-section upload-top">
-    <div class="section-head">
-      <div><p class="eyebrow">VISUAL ANALYSIS</p><h2>Annotate a chart screenshot</h2></div>
-      <span class="stamp">LOCAL BROWSER PROCESSING</span>
-    </div>
-    <article class="panel upload-panel">
-      <label class="dropzone" id="dropzone">
-        <input id="chartInput" type="file" accept="image/png,image/jpeg,image/webp">
-        <strong>Tap to add a chart screenshot</strong>
-        <span>PNG, JPG or WEBP · up to 25 MB</span>
-      </label>
-      <div id="previewWrap" class="preview-wrap" hidden>
-        <img id="chartPreview" alt="Chart screenshot">
-        <div class="button-row">
-          <button id="removeImage" class="secondary">Remove</button>
-          <button id="saveOriginal" class="secondary">Save original</button>
-        </div>
-      </div>
-      <button id="analyzeChart" class="primary wide" disabled>Analyze Screenshot <span>↗</span></button>
-    </article>
-    <article class="panel annotation-panel" id="annotationPanel" hidden>
-      <div class="panel-head">
-        <div><span class="eyebrow">CHART OVERLAY</span><h3>Detected structure</h3></div>
-        <span class="pill" id="visualState">WAIT</span>
-      </div>
-      <p id="visualReason" class="muted">—</p>
-      <canvas id="annotationCanvas"></canvas>
-      <button id="saveAnnotated" class="primary wide">Save annotated chart</button>
-    </article>
-  </section>
-
   <section class="hero">
     <div>
       <p class="eyebrow">REAL-TIME MARKET RESEARCH</p>
       <h1>Market context.<br><span>One clean view.</span></h1>
-      <p class="hero-copy">Upload your chart first, then combine screenshot analysis with multi-timeframe market research and live OpenAI analysis.</p>
+      <p class="hero-copy">Use live TradingView charts with multi-timeframe market research and AI technical + fundamental analysis.</p>
+    </div>
+  </section>
+
+  <section class="live-charts">
+    <div class="section-head">
+      <div><p class="eyebrow">LIVE MARKET CHARTS</p><h2>TradingView</h2></div>
+      <span class="stamp">LIVE FEED · READ-ONLY</span>
+    </div>
+    <div class="chart-grid">
+      <article class="panel chart-panel">
+        <div class="panel-head"><div><span class="eyebrow">BTCUSD</span><h3>Bitcoin / US Dollar</h3></div><span class="pill">LIVE</span></div>
+        <div class="tradingview-widget-container">
+          <div id="tradingview-btc" class="tradingview-widget-container__widget"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+          {
+            "autosize": true,
+            "symbol": "COINBASE:BTCUSD",
+            "interval": "15",
+            "timezone": "Africa/Johannesburg",
+            "theme": "light",
+            "style": "1",
+            "locale": "en",
+            "allow_symbol_change": false,
+            "calendar": false,
+            "hide_top_toolbar": false,
+            "hide_legend": false,
+            "save_image": false,
+            "hide_side_toolbar": false,
+            "support_host": "https://www.tradingview.com"
+          }
+          </script>
+        </div>
+      </article>
+      <article class="panel chart-panel">
+        <div class="panel-head"><div><span class="eyebrow">XAUUSD</span><h3>Gold / US Dollar</h3></div><span class="pill">LIVE</span></div>
+        <div class="tradingview-widget-container">
+          <div id="tradingview-xau" class="tradingview-widget-container__widget"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+          {
+            "autosize": true,
+            "symbol": "OANDA:XAUUSD",
+            "interval": "15",
+            "timezone": "Africa/Johannesburg",
+            "theme": "light",
+            "style": "1",
+            "locale": "en",
+            "allow_symbol_change": false,
+            "calendar": false,
+            "hide_top_toolbar": false,
+            "hide_legend": false,
+            "save_image": false,
+            "hide_side_toolbar": false,
+            "support_host": "https://www.tradingview.com"
+          }
+          </script>
+        </div>
+      </article>
     </div>
   </section>
 
