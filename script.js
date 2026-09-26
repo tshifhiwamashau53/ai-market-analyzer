@@ -18,7 +18,7 @@ function mountTradingView(){
  const host=$('tradingview-selected');if(!host)return;
  host.innerHTML='<div class="tradingview-widget-container__widget"></div>';
  const script=document.createElement('script');script.type='text/javascript';script.src='https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';script.async=true;
- script.text=JSON.stringify({autosize:true,symbol:chartSymbol(),interval:tvInterval(),timezone:'Africa/Johannesburg',theme:'light',style:'1',locale:'en',allow_symbol_change:false,calendar:false,hide_top_toolbar:false,hide_legend:false,save_image:false,hide_side_toolbar:false,support_host:'https://www.tradingview.com'});
+ script.text=JSON.stringify({autosize:false,height:window.innerWidth<=760?700:820,symbol:chartSymbol(),interval:tvInterval(),timezone:'Africa/Johannesburg',theme:'light',style:'1',locale:'en',allow_symbol_change:false,calendar:false,hide_top_toolbar:false,hide_legend:false,save_image:false,hide_side_toolbar:false,support_host:'https://www.tradingview.com'});
  host.appendChild(script);
  const label=chartLabel();set('chartAssetEyebrow',label.eyebrow);set('chartAssetTitle',label.title);
  document.querySelectorAll('.asset-tab').forEach(tab=>{const active=tab.dataset.chartAsset===state.asset;tab.classList.toggle('active',active);tab.setAttribute('aria-selected',active?'true':'false')});
