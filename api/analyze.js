@@ -22,10 +22,14 @@ function compactMarket(m) {
       vwap: safeNumber(i.vwap),
       support: safeNumber(i.support),
       resistance: safeNumber(i.resistance),
-      structure: i.structure || 'NEUTRAL'
+      structure: i.structure || 'NEUTRAL',
+      candlePattern: i.candlePattern || 'UNKNOWN',
+      structureDetail: i.structureDetail || null,
+      poc: safeNumber(i.poc),
+      volatilityPercent: safeNumber(i.volatilityPercent)
     },
     momentum: m.momentum || 'MIXED',
-    volatility: safeNumber(m.volatility)
+    volatility: safeNumber(m.volatility) || safeNumber(i.volatilityPercent)
   };
 }
 
@@ -37,11 +41,11 @@ function buildPrompt(body) {
     'Analyze the supplied numerical market data and, if present, the supplied chart screenshot.',
     'Do NOT use any named strategy or fixed sequence. Use pure technical analysis and price action.',
     'Read the candles and classify identifiable patterns (doji, hammer, shooting star, bullish/bearish engulfing, pin bar, inside bar, marubozu/strong momentum candle, spinning top, etc.) only when the OHLC evidence supports the label.',
-    'Read market structure: swing highs/lows, HH/HL, LH/LL, breaks of structure, failed breaks, support/resistance, trend, momentum and volatility.',
+    'Read market structure: swing highs/lows, HH/HL, LH/LL, breaks of structure, failed breaks, support/resistance, trend, momentum and volatility. Use the supplied structure detail and POC as evidence, not as automatic signals.',
     'Explain WHY the evidence supports bullish, bearish or neutral direction. Separate observed facts from interpretation.',
     'Give timing as BUY AREA, SELL AREA, WAIT, or NO TRADE. Do not claim certainty or guaranteed outcomes.',
     'Give conditional entry/reference areas and invalidation/target levels only when supported by supplied price data; clearly state what confirmation is required before entry.',
-    'Evaluate fundamental context and recent news. Rate each important news event by likely market impact as LOW, MEDIUM, HIGH, or EXTREME and explain the reason. Do not invent events.',
+    'Evaluate fundamental context and recent news. Rate each important news event by likely market impact as LOW, MEDIUM, HIGH, or EXTREME and explain the reason. Do not invent events. Separate scheduled events from unscheduled headlines.',
     'Only mark a stage as confirmed when the supplied evidence supports it. If evidence is missing, say WAITING or UNCONFIRMED.',
     'Treat confidence as analysis quality/confluence, NOT probability of profit.',
     'If the screenshot and numerical data disagree, explicitly mention the disagreement.',
@@ -79,6 +83,9 @@ const schema = {
     entry_plan: { type: 'string' },
     news_assessment: { type: 'string' },
     news_events: { type: 'array', items: { type: 'string' } },
+    scenario: { type: 'string' },
+    confirmation_conditions: { type: 'array', items: { type: 'string' } },
+    risk_context: { type: 'string' },
     analysis_quality: { type: 'number', minimum: 0, maximum: 100 },
     summary: { type: 'string' },
     waiting_for: { type: 'string' },
@@ -101,6 +108,9 @@ const schema = {
     'entry_plan',
     'news_assessment',
     'news_events',
+    'scenario',
+    'confirmation_conditions',
+    'risk_context',
     'analysis_quality',
     'summary',
     'waiting_for',
