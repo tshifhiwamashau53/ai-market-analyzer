@@ -32,7 +32,7 @@ function renderMain(m,setup){
  set('quality',setup.quality+' / 100');$('qualityBar').style.width=setup.quality+'%';set('price',fmt(price));set('change',pct(m.changePercent));set('poc',fmt(m.poc));set('support',fmt(i.support));set('resistance',fmt(i.resistance));set('volatility',Number.isFinite(m.volatility)?m.volatility.toFixed(3)+'% ATR':'—');
  const vals=[['EMA 20',fmt(i.ema20)],['EMA 50',fmt(i.ema50)],['RSI 14',Number.isFinite(i.rsi14)?i.rsi14.toFixed(1):'—'],['ATR 14',fmt(i.atr14)],['VWAP',fmt(i.vwap)],['STRUCTURE',i.structure||'—']];$('indicators').innerHTML=vals.map(x=>'<div><span>'+x[0]+'</span><b>'+x[1]+'</b></div>').join('');
  $('stageFlow').innerHTML=setup.stages.map((x,n)=>'<div><b>0'+(n+1)+'</b><span>'+x[0]+'</span><strong>'+x[1]+'</strong></div>').join('');set('setupState',setup.continuation==='WAITING'?'WAITING FOR CONFIRMATION':setup.continuation+' CONTINUATION');
- set('dataSource','DATA SOURCE — '+(m.provider||'market API'));const age=m.timestamp?Math.max(0,(Date.now()-new Date(m.timestamp).getTime())/1000):null;set('dataAge',age!==null?'LAST UPDATE — '+Math.round(age)+'s AGO':'LAST UPDATE — —');set('apiMode','ENGINE — DETERMINISTIC TECHNICAL RULES');set('analyzedAt',new Date().toLocaleTimeString());
+ set('dataSource','DATA SOURCE — '+(m.provider||'market API'));const age=m.timestamp?Math.max(0,(Date.now()-new Date(m.timestamp).getTime())/1000):null;set('dataAge',age!==null?'LAST UPDATE — '+Math.round(age)+'s AGO':'LAST UPDATE — —');set('apiMode','ENGINE — TECHNICAL + CANDLE ANALYSIS');set('analyzedAt',new Date().toLocaleTimeString());
  const reasons=['HTF alignment: '+setup.bias+'.','EMA structure: '+(i.structure||'neutral')+'; EMA20 '+fmt(i.ema20)+', EMA50 '+fmt(i.ema50)+'.','Momentum: '+(m.momentum||'mixed')+'; RSI14 '+(Number.isFinite(i.rsi14)?i.rsi14.toFixed(1):'—')+'.','POC reference: '+fmt(m.poc)+'; current reference: '+fmt(m.price)+'.','ATR volatility: '+fmt(i.atr14)+'; recent support '+fmt(i.support)+', resistance '+fmt(i.resistance)+'.'];$('reasoning').innerHTML=reasons.map(x=>'<li>'+esc(x)+'</li>').join('')
 }
 function apiBase(){return '/api/'}
@@ -45,10 +45,10 @@ function analysisImage(){
   return c.toDataURL('image/jpeg',0.78);
 }
 async function runAIAnalysis(){
-  const payload={asset:state.asset,timeframe:state.timeframe,depth:$('depth')?.value||'deep',markets:state.markets,visualAnalysis:state.visual,strategy:'Higher-timeframe bias -> accumulation -> volume profile/POC -> breakout -> pullback to POC -> continuation'};
+  const payload={asset:state.asset,timeframe:state.timeframe,depth:$('depth')?.value||'deep',markets:state.markets,visualAnalysis:state.visual,strategy:'NONE — use pure technical analysis: market structure, candle-by-candle price action, support/resistance, trend, momentum, volatility, and multi-timeframe context. Identify candle patterns such as doji, hammer, shooting star, engulfing, pin bar, inside bar and strong momentum candles. Explain the evidence for bullish, bearish or neutral direction. Classify the actionable state as BUY AREA, SELL AREA, WAIT, or NO TRADE. Provide conditional entry/reference levels, invalidation and targets only when supported by the data. Do not use the old accumulation/volume-profile/breakout strategy.'};
   const image=analysisImage(); if(image) payload.image=image;
   try{
-    set('apiMode','ENGINE — OPENAI + TECHNICAL DATA'); status(true,'AI CONNECTED');
+    set('apiMode','ENGINE — AI TECHNICAL + FUNDAMENTAL ANALYSIS'); status(true,'AI CONNECTED');
     const r=await fetch(apiBase()+'analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const j=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(j.error||'OpenAI analysis unavailable');
@@ -57,9 +57,9 @@ async function runAIAnalysis(){
     if(a.higher_timeframe_bias) set('bias',a.higher_timeframe_bias);
     if(a.summary) set('biasReason',a.summary);
     if(Number.isFinite(Number(a.analysis_quality))){const q=Math.max(0,Math.min(100,Number(a.analysis_quality)));set('quality',Math.round(q)+' / 100');$('qualityBar').style.width=q+'%';}
-    if(a.setup_stage) set('setupState',a.setup_stage);
+    if(a.setup_stage) set('setupState',a.setup_stage); if(a.reference_level!==null&&a.reference_level!==undefined) set('support',fmt(a.reference_level)); if(a.invalidation_level!==null&&a.invalidation_level!==undefined) set('resistance',fmt(a.invalidation_level));
     if(a.poc!==null&&a.poc!==undefined) set('poc',fmt(a.poc));
-    const reasons=[...(Array.isArray(a.reasoning)?a.reasoning:[]),a.waiting_for?'Waiting for: '+a.waiting_for:'',a.data_quality?'Data quality: '+a.data_quality:''].filter(Boolean);
+    const reasons=[a.candle_reading?'Candle reading: '+a.candle_reading:'',a.direction_reason?'Direction: '+a.direction_reason:'',a.action_reason?'Action timing: '+a.action_reason:'',a.entry_plan?'Entry plan: '+a.entry_plan:'',a.news_assessment?'News assessment: '+a.news_assessment:'',...(Array.isArray(a.reasoning)?a.reasoning:[]),a.waiting_for?'Waiting for: '+a.waiting_for:'',a.data_quality?'Data quality: '+a.data_quality:''].filter(Boolean);
     if(reasons.length) $('reasoning').innerHTML=reasons.slice(0,8).map(x=>'<li>'+esc(x)+'</li>').join('');
     state.ai=a; set('analyzedAt',new Date().toLocaleTimeString());
   }catch(e){
