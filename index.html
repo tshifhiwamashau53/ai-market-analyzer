@@ -14,10 +14,42 @@
 <body>
 <header class="topbar">
   <a class="brand" href="./"><span class="brand-mark">AM</span><span>AI Market Analyzer <em>PRO</em></span></a>
+  <nav class="topnav" aria-label="Primary navigation">
+    <button type="button" class="nav-btn active" data-page="analyzer">MARKET ANALYZER</button>
+    <button type="button" class="nav-btn" data-page="performance">PERFORMANCE</button>
+  </nav>
   <div class="connection"><i id="connectionDot"></i><span id="connectionText">READY</span></div>
 </header>
 
 <main class="container">
+  <section id="performancePage" class="performance-page" hidden>
+    <div class="section-head">
+      <div><p class="eyebrow">PERFORMANCE</p><h2>Signal Performance</h2></div>
+      <span class="stamp" id="performanceWeek">THIS WEEK</span>
+    </div>
+    <div class="performance-grid">
+      <article class="metric-card"><span class="label">TOTAL SIGNALS</span><strong id="perfTotal">0</strong><p>Recorded analytical signals</p></article>
+      <article class="metric-card"><span class="label">WON</span><strong id="perfWon">0</strong><p>Reached the recorded target before invalidation</p></article>
+      <article class="metric-card"><span class="label">LOST</span><strong id="perfLost">0</strong><p>Reached the recorded invalidation/SL before target</p></article>
+      <article class="metric-card"><span class="label">WIN RATE</span><strong id="perfRate">—</strong><p>Wins divided by resolved signals</p></article>
+    </div>
+    <div class="grid-2">
+      <article class="panel">
+        <div class="panel-head"><div><span class="eyebrow">OUTCOMES</span><h3>Won vs Lost</h3></div></div>
+        <div class="pie-wrap"><canvas id="performancePie" width="420" height="280" aria-label="Won versus lost pie chart"></canvas></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><div><span class="eyebrow">DAILY PERFORMANCE</span><h3>Wins and losses by day</h3></div></div>
+        <div class="bar-wrap"><canvas id="performanceBar" width="640" height="280" aria-label="Daily wins and losses bar chart"></canvas></div>
+      </article>
+    </div>
+    <article class="panel">
+      <div class="panel-head"><div><span class="eyebrow">SIGNAL HISTORY</span><h3>Recorded signals</h3></div><button type="button" class="secondary small-btn" id="clearPerformance">Clear history</button></div>
+      <div id="signalHistory" class="signal-history"><p class="muted">No recorded signals yet.</p></div>
+    </article>
+    <p class="chart-note">Performance is calculated from signals recorded by this analyzer. It does not represent guaranteed future results. Historical records are stored in this browser.</p>
+  </section>
+  <section id="analyzerPage">
   <section class="hero">
     <div>
       <p class="eyebrow">LIVE MARKET RESEARCH</p>
