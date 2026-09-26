@@ -8,4 +8,8 @@ def performance(returns:pd.Series)->dict:
     drawdown=equity/equity.cummax()-1 if len(equity) else pd.Series(dtype=float)
     max_dd=float(drawdown.min()) if len(drawdown) else 0.0
     sharpe=float(r.mean()/r.std()*np.sqrt(252)) if len(r)>1 and r.std()>0 else 0.0
-    return {"total_return":total,"max_drawdown":max_dd,"sharpe":sharpe,"observations":int(len(r))}
+    wins=r[r>0]; losses=r[r<0]
+    return {"total_return":total,"max_drawdown":max_dd,"sharpe":sharpe,"observations":int(len(r)),
+            "win_rate":float(len(wins)/len(r)) if len(r) else 0.0,
+            "profit_factor":float(wins.sum()/abs(losses.sum())) if len(losses) and losses.sum()!=0 else 0.0,
+            "expectancy":float(r.mean()) if len(r) else 0.0}
