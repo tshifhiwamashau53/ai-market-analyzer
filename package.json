@@ -2,6 +2,7 @@
   "name": "ai-market-analyzer",
   "private": true,
   "type": "module",
+  "workspaces": ["apps/web"],
   "scripts": {
     "build": "npm run build:web",
     "build:web": "npm --prefix apps/web run build",
