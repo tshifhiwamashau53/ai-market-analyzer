@@ -80,25 +80,16 @@
       <p class="chart-note">The charts are supplied by TradingView. The AI analysis uses synchronized OHLC market data for the same instruments and selected timeframe; it does not pretend to read pixels from the embedded TradingView iframe.</p>
     </section>
 
-    <section class="control-card">
+    <section class="control-card chart-analysis-controls">
       <div class="control-grid">
-        <label>ASSET<select id="asset">
-          <option value="XAUUSD">XAUUSD</option>
-          <option value="BTCUSD">BTCUSD</option>
-        </select></label>
         <label>EXECUTION TIMEFRAME<select id="timeframe">
           <option value="5m">5 MIN</option><option value="15m" selected>15 MIN</option><option value="1h">1 HOUR</option>
         </select></label>
         <label>ANALYSIS DEPTH<select id="depth">
           <option value="standard">STANDARD</option><option value="deep" selected>DEEP</option>
         </select></label>
-        <button id="analyzeMarket" class="primary">Analyze Market <span>↗</span></button>
       </div>
-      <div class="data-strip">
-        <span id="dataSource">DATA SOURCE — waiting</span>
-        <span id="dataAge">LAST UPDATE — —</span>
-        <span id="apiMode">ENGINE — LOCAL RULES</span>
-      </div>
+      <button id="analyzeMarket" class="primary chart-analyze-button">Analyze Market <span>↗</span></button>
     </section>
 
     <section class="dashboard" id="dashboard">
