@@ -9,3 +9,4 @@ async function request(path:string,init?:RequestInit){
 }
 export const marketHistory=(symbol:string,period="6mo",interval="1d")=>request("/market/"+encodeURIComponent(symbol)+"/history?period="+period+"&interval="+interval) as Promise<MarketHistory>;
 export const analyzeMarket=(symbol:string,period="6mo",interval="1d")=>request("/analysis",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({symbol,period,interval,depth:"standard"})}) as Promise<Analysis>;
+export const backtestMarket=(symbol:string,period="2y",interval="1d")=>request(`/backtest/${encodeURIComponent(symbol)}?period=${period}&interval=${interval}`) as Promise<{symbol:string;metrics:{total_return:number;max_drawdown:number;sharpe:number;observations:number}}>;
