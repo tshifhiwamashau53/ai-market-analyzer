@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260926-07">
+<link rel="stylesheet" href="style.css?v=20260926-08">
 </head>
 <body>
 <header class="topbar">
@@ -55,9 +55,9 @@
     <div class="page-divider"><span>MARKET ANALYSIS</span><i></i></div>
     <section class="hero">
       <div>
-        <p class="eyebrow">LIVE MARKET RESEARCH</p>
-        <h1>Market context.<br><span>One clean view.</span></h1>
-        <p class="hero-copy">Live TradingView charts for BTCUSD and XAUUSD, synchronized market data, multi-timeframe technical analysis, news, fundamentals and AI reasoning.</p>
+        <p class="eyebrow">AI MARKET INTELLIGENCE</p>
+        <h1>Analyze markets.<br><span>Structure decisions.</span></h1>
+        <p class="hero-copy">Live charts, multi-timeframe structure, price action, macro context and AI-assisted market research in one workspace.</p>
       </div>
     </section>
 
@@ -115,6 +115,19 @@
       </div>
 
       <article class="panel strategy-panel"><div class="panel-head"><div><span class="eyebrow">PRICE ACTION</span><h3>Candle & structure reading</h3></div><span class="pill">TECHNICAL</span></div><div class="context-grid"><div><span>ACTION</span><b id="actionState">WAIT</b></div><div><span>LAST CANDLE</span><b id="lastCandle">—</b></div><div><span>PREVIOUS</span><b id="previousCandle">—</b></div><div><span>ENTRY PLAN</span><b id="entryPlan">Wait for analysis</b></div></div><p id="actionReason" class="muted">The engine reads verified OHLC candles. OpenAI adds deeper technical reasoning and current fundamental/news context when configured.</p></article>
+      <article class="panel signal-plan">
+        <div class="panel-head"><div><span class="eyebrow">SIGNAL PLAN</span><h3>Reference levels</h3></div><span class="pill">READ-ONLY</span></div>
+        <div class="signal-levels">
+          <div><span>ACTION</span><b id="signalAction">WAIT</b></div>
+          <div><span>ENTRY</span><b id="signalEntry">—</b></div>
+          <div><span>STOP LOSS</span><b id="signalStop">—</b></div>
+          <div><span>TAKE PROFIT</span><b id="signalTarget">—</b></div>
+        </div>
+        <div class="signal-meta">
+          <div><span>INVALIDATION</span><b id="signalInvalidation">—</b></div>
+          <div><span>WAITING FOR</span><b id="signalWaiting">—</b></div>
+        </div>
+      </article>
 
       <article class="panel strategy-panel">
         <div class="panel-head"><div><span class="eyebrow">TECHNICAL ANALYSIS</span><h3>Market structure & price action</h3></div><span class="pill" id="setupState">WAITING</span></div>
@@ -133,6 +146,6 @@
 </main>
 
 <footer><span>AI Market Analyzer Pro · read-only research</span><span>Levels are analytical reference areas, not guarantees.</span></footer>
-<script src="script.js?v=20260926-07" defer></script>
+<script src="script.js?v=20260926-08" defer></script>
 </body>
 </html>
