@@ -1,0 +1,4 @@
+import {Candle} from "@/types/market";
+export function sma(v:number[],p:number){return v.slice(-p).reduce((a,b)=>a+b,0)/Math.min(p,v.length)}
+export function forecast(c:Candle[],n=24){const last=c.at(-1)!.close,r=c.slice(-24),s=(r.at(-1)!.close-r[0].close)/Math.max(1,r.length-1);return Array.from({length:n},(_,i)=>({time:r.at(-1)!.time+(i+1)*900,value:last+s*(i+1)}))}
+export function runBacktest(c:Candle[]){let equity=10000,peak=equity,maxDd=0,wins=0,losses=0,trades=0;for(let i=60;i<c.length-2;i+=3){const fast=sma(c.slice(0,i).map(x=>x.close),20),slow=sma(c.slice(0,i).map(x=>x.close),50),dir=fast>slow?1:-1,ret=(c[i+2].close-c[i].close)/c[i].close*dir;equity*=1+ret*.45;ret>0?wins++:losses++;trades++;peak=Math.max(peak,equity);maxDd=Math.max(maxDd,(peak-equity)/peak)}return{totalReturn:(equity/10000-1)*100,maxDrawdown:maxDd*100,sharpe:trades?((equity/10000-1)/Math.max(.01,maxDd))*.8:0,wins,losses,trades,equity}}
