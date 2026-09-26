@@ -73,7 +73,7 @@ async function runAIAnalysis(){
     if(a.higher_timeframe_bias) set('bias',a.higher_timeframe_bias);
     if(a.summary) set('biasReason',a.summary);
     if(Number.isFinite(Number(a.analysis_quality))){const q=Math.max(0,Math.min(100,Number(a.analysis_quality)));set('quality',Math.round(q)+' / 100');$('qualityBar').style.width=q+'%';}
-    if(a.setup_stage) set('setupState',a.setup_stage); if(a.reference_level!==null&&a.reference_level!==undefined) set('support',fmt(a.reference_level)); if(a.invalidation_level!==null&&a.invalidation_level!==undefined) set('resistance',fmt(a.invalidation_level));
+    if(a.setup_stage) set('setupState',a.setup_stage); if(a.action_state) set('actionState',a.action_state); if(a.candle_reading) set('lastCandle',a.candle_reading); if(a.entry_plan) set('entryPlan',a.entry_plan); if(a.action_reason) set('actionReason',a.action_reason); if(a.reference_level!==null&&a.reference_level!==undefined) set('support',fmt(a.reference_level)); if(a.invalidation_level!==null&&a.invalidation_level!==undefined) set('resistance',fmt(a.invalidation_level));
     if(a.poc!==null&&a.poc!==undefined) set('poc',fmt(a.poc));
     const reasons=[a.candle_reading?'Candle reading: '+a.candle_reading:'',a.direction_reason?'Direction: '+a.direction_reason:'',a.action_reason?'Action timing: '+a.action_reason:'',a.entry_plan?'Entry plan: '+a.entry_plan:'',a.news_assessment?'News assessment: '+a.news_assessment:'',...(Array.isArray(a.reasoning)?a.reasoning:[]),a.waiting_for?'Waiting for: '+a.waiting_for:'',a.data_quality?'Data quality: '+a.data_quality:''].filter(Boolean);
     if(reasons.length) $('reasoning').innerHTML=reasons.slice(0,8).map(x=>'<li>'+esc(x)+'</li>').join('');
