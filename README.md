@@ -1,56 +1,34 @@
-# AI Market Analyzer PRO
+# AI Market Analyzer
 
-Frontend-first quantitative market research application.
+A market-data viewer that reads prices and historical candles from a locally running MetaTrader 5 desktop terminal.
 
-## Current build
-
-The repository contains a Next.js + TypeScript frontend with:
-
-- Responsive FinTech dashboard
-- Asset search and switching
-- XAUUSD, BTCUSD, EURUSD and US30 local datasets
-- Lightweight Charts candlestick visualization
-- Predicted trajectory visualization
-- EMA, RSI, MACD, Bollinger Bands, ATR and VWAP
-- Market structure and candle-reading panels
-- Entry, stop-loss and take-profit reference levels
-- Multi-timeframe bias interface
-- Sentiment/NLP interface ready for future backend integration
-- Local backtesting and risk metrics
-- Read-only architecture with execution disabled
-
-The current market data is deterministic local demo data. It is not live market data and the forecast display is a UI/testing component, not a claim of predictive accuracy.
-
-## Run locally
+## Run the web app
 
 ```bash
 npm install
 npm run dev
 ```
 
-Then open the local URL shown by Next.js.
+## Start the MT5 data bridge
 
-To verify a production build:
+The broker-neutral, read-only bridge is in [mt5-bridge/](mt5-bridge/README.md). It uses whichever broker account is already logged into the local MT5 terminal.
+
+```powershell
+cd mt5-bridge
+py -m pip install -r requirements.txt
+py bridge.py
+```
+
+Then open the web app at `http://localhost:3000`. The bridge listens on `127.0.0.1:8765` and exposes market-data endpoints only.
+
+## Build
 
 ```bash
 npm run build
 ```
 
-Because the frontend is configured for static export, the generated site is written to `apps/web/out`.
+The frontend is configured for static export into `apps/web/out`.
 
-## Architecture
+## Safety
 
-```
-apps/web/
-  src/app/          Next.js App Router
-  src/components/   Dashboard and chart UI
-  src/lib/          Local data, indicators and backtesting
-  src/types/        Shared frontend contracts
-
-services/api/       Reserved for future FastAPI service
-packages/shared-types/ Reserved for future API contracts
-```
-
-The backend is intentionally not connected yet. FastAPI, PostgreSQL, Redis, live market providers, news sentiment and ML inference can be attached later without rebuilding the dashboard.
-
-Never put private API keys in browser-side code.
+This project provides read-only market data. It does not place, modify, or close orders, and it does not store broker login credentials. Do not expose the local bridge to the public internet.

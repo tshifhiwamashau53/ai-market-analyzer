@@ -1,39 +1,96 @@
-export type ApiCandle={time:string;open:number;high:number;low:number;close:number;volume:number};
-export type MarketHistory={symbol:string;interval:string;candles:ApiCandle[];source:string};
-export type Analysis={
- decision:"BUY"|"SELL"|"WAIT"; confidence:number; instrument:string; timeframe:string;
- currentPrice:number|null; marketCondition:string; analysisFramework:string;
- higherTimeframeBias:"BULLISH"|"BEARISH"|"NEUTRAL";
- entry:number|null; entryZone:{low:number|null;high:number|null}; stopLoss:number|null;
- takeProfits:{tp1:number|null;tp2:number|null;tp3:number|null};
- riskReward:{tp1:number|null;tp2:number|null;tp3:number|null};
- priceAction:{trend:string;structure:string;momentum:string;liquidity:string;keyLevels:string[]};
- technicalEvidence:string[];
- fundamentalAnalysis:{bias:"BULLISH"|"BEARISH"|"NEUTRAL";keyFactors:string[];researchAvailable:boolean};
- newsAnalysis:{bias:string;risk:"LOW"|"MEDIUM"|"HIGH"|"UNKNOWN";importantEvents:string[]};
- setupConditions:string[]; invalidationConditions:string[]; waitFor:string[]; reasoning:string[]; warnings:string[];
+export type ApiCandle = {
+  time: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
 };
-export type AdvancedAnalysis={symbol:string;execution_timeframe:string;current_price:number;higher_timeframe_bias:string;market_state:string;action:string;confidence:number;timeframes:{timeframe:string;direction:string;structure:string;momentum:string;price:number;ema20:number|null;ema50:number|null;rsi14:number|null;atr14:number|null;vwap:number|null;poc:number|null;support:number|null;resistance:number|null}[];strategy:{stage:string;direction:string;confirmed:boolean;score:number;entry:number|null;planned_entry:number|null;stop_loss:number|null;targets:number[];invalidation:number|null;risk_reward:number|null;range_high:number|null;range_low:number|null;poc:number|null;breakout_level:number|null;waiting_for:string[];reasons:string[]};forecast:{time:string;value:number;lower:number;upper:number}[];data_quality:string;generated_at:string};
-export const advancedMarket=(symbol:string,executionTimeframe="15m")=>request("/advanced/"+encodeURIComponent(symbol)+"?execution_timeframe="+encodeURIComponent(executionTimeframe)) as Promise<AdvancedAnalysis>;
-export const backtestMarket=(symbol:string,period="2y",interval="1d")=>request("/backtest/"+encodeURIComponent(symbol)+"?period="+period+"&interval="+interval) as Promise<{symbol:string;period:string;interval:string;metrics:{total_return:number;max_drawdown:number;sharpe:number;observations:number;win_rate:number;profit_factor:number;expectancy:number;winning_trades:number;losing_trades:number};validation_note:string}>;
-function unavailableAnalysis(symbol:string,tf:string):Analysis{return{
- decision:"WAIT",confidence:0,instrument:symbol.toUpperCase(),timeframe:tf,currentPrice:null,
- marketCondition:"AI engine unavailable",analysisFramework:"WAIT — AI API not configured",
- higherTimeframeBias:"NEUTRAL",entry:null,entryZone:{low:null,high:null},stopLoss:null,
- takeProfits:{tp1:null,tp2:null,tp3:null},riskReward:{tp1:null,tp2:null,tp3:null},
- priceAction:{trend:"UNKNOWN",structure:"UNKNOWN",momentum:"UNKNOWN",liquidity:"UNKNOWN",keyLevels:[]},
- technicalEvidence:[],fundamentalAnalysis:{bias:"NEUTRAL",keyFactors:[],researchAvailable:false},
- newsAnalysis:{bias:"UNKNOWN",risk:"UNKNOWN",importantEvents:[]},setupConditions:[],
- invalidationConditions:[],waitFor:["Configure the AI API and supply verified market data."],
- reasoning:["No local trading signal is generated when the AI engine is unavailable."],
- warnings:["WAIT: analysis is unavailable."]
-};}
-export const analyzeMarket=async(symbol:string,period="6mo",interval="15m"):Promise<Analysis>=>{
- const timeframes=["4h","1h","15m","5m"];
- const raws=await Promise.all(timeframes.map(tf=>vercelMarket(symbol,tf,220)));
- const markets=Object.fromEntries(timeframes.map((tf,i)=>[tf,raws[i]]));
- const response=await request("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({asset:symbol.toUpperCase(),timeframe:interval,depth:"deep",markets})});
- if(response?.available===false) return unavailableAnalysis(symbol,interval);
- return response.analysis as Analysis;
+
+export type MarketHistory = {
+  symbol: string;
+  interval: string;
+  candles: ApiCandle[];
+  source: string;
 };
+
+const bridgeBase = (
+  process.env.NEXT_PUBLIC_MT5_BRIDGE_URL || "http://127.0.0.1:8765"
+).replace(/\/$/, "");
+
+async function bridgeRequest<T>(path: string): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(bridgeBase + path, { cache: "no-store" });
+  } catch {
+    throw new Error(
+      "Cannot reach the local MT5 bridge. Start MT5 and run the bridge on this computer."
+    );
+  }
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.ok) {
+    throw new Error(
+      payload?.details || payload?.error || "The MT5 bridge request failed."
+    );
+  }
+  return payload as T;
+}
+
+export async function marketHistory(
+  symbol: string,
+  _period = "6mo",
+  interval = "1d"
+): Promise<MarketHistory> {
+  const query = new URLSearchParams({
+    symbol: symbol.trim(),
+    interval,
+    limit: "300",
+  });
+
+  const [history, health] = await Promise.all([
+    bridgeRequest<{
+      providerSymbol: string;
+      timeframe: string;
+      candles: ApiCandle[];
+    }>("/candles?" + query.toString()),
+    bridgeRequest<{ server?: string; company?: string }>("/health"),
+  ]);
+
+  return {
+    symbol: history.providerSymbol,
+    interval: history.timeframe,
+    candles: history.candles,
+    source: [health.company, health.server, "MetaTrader 5"].filter(Boolean).join(" · "),
+  };
+}
+
+export type Mt5Symbol = {
+  symbol: string;
+  displayName: string;
+  path: string;
+  bid: number;
+  ask: number;
+  spread: number;
+  digits: number;
+  visible: boolean;
+};
+
+export type Mt5Health = {
+  ok: boolean;
+  connected: boolean;
+  terminalConnected: boolean;
+  broker: string;
+  company: string;
+  server: string;
+  terminal: string;
+};
+
+export async function getMt5Health(): Promise<Mt5Health> {
+  return bridgeRequest<Mt5Health>("/health");
+}
+
+export async function getMt5Symbols(): Promise<Mt5Symbol[]> {
+  const result = await bridgeRequest<{ symbols: Mt5Symbol[] }>("/symbols");
+  return result.symbols;
+}
