@@ -1,42 +1,113 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Activity, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, RefreshCw, ShieldAlert } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Activity, RefreshCw, Search } from "lucide-react";
+import { getMt5Health, getMt5Symbols, type Mt5Health, type Mt5Symbol } from "@/lib/api";
 
-type Position = { ticket:number; symbol:string; type:"BUY"|"SELL"; volume:number; priceOpen:number; priceCurrent:number; stopLoss:number; takeProfit:number; profit:number; swap:number; time:string };
-type Status = { connected:boolean; liveTradingConfigured:boolean; terminalTradingAllowed:boolean; account:{login:number;server:string;currency:string;balance:number;equity:number;margin:number;freeMargin:number;leverage:number}; risk:{maxOrderVolume:number;maxOpenPositions:number;maxDailyLoss:number;realizedToday:number;floatingPnl:number;dailyLossLimitReached:boolean}; positions:Position[] };
-const CONFIRMATION = "I UNDERSTAND THIS PLACES A REAL EXNESS ORDER";
-const money = (n:number,currency="USD") => new Intl.NumberFormat(undefined,{style:"currency",currency,maximumFractionDigits:2}).format(n);
+export default function Mt5ConnectionPage() {
+  const [health, setHealth] = useState<Mt5Health | null>(null);
+  const [symbols, setSymbols] = useState<Mt5Symbol[]>([]);
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-export default function TradingPage(){
-  const [base,setBase]=useState("http://127.0.0.1:8765"),[token,setToken]=useState(""),[status,setStatus]=useState<Status|null>(null);
-  const [symbol,setSymbol]=useState("XAUUSDm"),[side,setSide]=useState<"BUY"|"SELL">("BUY"),[volume,setVolume]=useState("0.01"),[sl,setSl]=useState(""),[tp,setTp]=useState("");
-  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
-  const request=useCallback(async(path:string,body?:unknown)=>{const response=await fetch(`${base.replace(/\/$/,"")}${path}`,{method:body?"POST":"GET",headers:{Authorization:`Bearer ${token}`,...(body?{"Content-Type":"application/json"}:{})},body:body?JSON.stringify(body):undefined,cache:"no-store"});const json=await response.json();if(!response.ok||!json.ok)throw new Error(json.details||json.error||`HTTP ${response.status}`);return json;},[base,token]);
-  const refresh=useCallback(async()=>{if(!token)return;setBusy(true);setError("");try{setStatus(await request("/trading/status"));}catch(e){setError(e instanceof Error?e.message:"Unable to reach local MT5 bridge");setStatus(null);}finally{setBusy(false);}},[request,token]);
-  useEffect(()=>{const saved=sessionStorage.getItem("mt5-bridge-token");if(saved)setToken(saved);},[]);
-  useEffect(()=>{if(token){sessionStorage.setItem("mt5-bridge-token",token);void refresh();}},[token,refresh]);
-  const trade=async()=>{setBusy(true);setError("");setMessage("");try{const answer=await request("/trading/order",{symbol:symbol.trim(),side,volume:Number(volume),stopLoss:Number(sl),takeProfit:Number(tp),confirmation:CONFIRMATION});setMessage(`Broker accepted ${answer.side} ${answer.volume} ${answer.symbol} at ${answer.price} (order ${answer.order}).`);await refresh();}catch(e){setError(e instanceof Error?e.message:"Order failed");}finally{setBusy(false);}};
-  const close=async(ticket:number)=>{if(!window.confirm(`Close live MT5 position #${ticket}? This submits a real market order.`))return;setBusy(true);setError("");try{const answer=await request("/trading/close",{ticket,confirmation:CONFIRMATION});setMessage(answer.message);await refresh();}catch(e){setError(e instanceof Error?e.message:"Close request failed");}finally{setBusy(false);}};
-  const sendTrade=()=>{if(!status?.liveTradingConfigured||!status.terminalTradingAllowed){setError("Live trading is not enabled in the local bridge and MT5 terminal.");return;}if(!window.confirm(`${side} ${volume} ${symbol} on the connected Exness account with SL ${sl} and TP ${tp}? This is a REAL order.`))return;void trade();};
-  const currency=status?.account.currency||"USD";
-  return <main className="wrap" style={{maxWidth:1120,paddingTop:32}}>
-    <header className="head" style={{marginBottom:24}}><div><div className="eyebrow">EXNESS · LOCAL MT5 TERMINAL</div><h1>Live trading console</h1><p className="sub">Real broker orders only. Bridge remains bound to this computer; keep credentials private.</p></div><a className="badge" href="/">Back to analyzer</a></header>
-    <section className="card" style={{padding:20,marginBottom:16}}><div className="head"><div><div className="eyebrow">SECURE LOCAL CONNECTION</div><h3>Bridge access</h3></div><button className="button" onClick={()=>void refresh()} disabled={!token||busy}><RefreshCw size={15}/> Refresh</button></div>
-      <div className="grid two"><label className="field">Bridge URL<input value={base} onChange={e=>setBase(e.target.value)} autoComplete="url"/></label><label className="field">Local bridge token<input type="password" value={token} onChange={e=>setToken(e.target.value)} placeholder="Set MT5_BRIDGE_TOKEN locally" autoComplete="off"/></label></div>
-      <p className="sub">Token is held in this browser session only. The bridge must be running on the same computer. Never expose port 8765 publicly.</p>
-      {error&&<p role="alert" className="negative">{error}</p>}{message&&<p role="status" className="positive">{message}</p>}
-    </section>
-    {status&&<><section className="grid four section"><article className="card kpi"><div className="eyebrow">ACCOUNT</div><strong>#{status.account.login}</strong><p>{status.account.server} · {status.account.leverage}:1</p></article><article className="card kpi"><div className="eyebrow">EQUITY</div><strong>{money(status.account.equity,currency)}</strong><p>Balance {money(status.account.balance,currency)}</p></article><article className="card kpi"><div className="eyebrow">FREE MARGIN</div><strong>{money(status.account.freeMargin,currency)}</strong><p>Used {money(status.account.margin,currency)}</p></article><article className="card kpi"><div className="eyebrow">TODAY P/L</div><strong className={(status.risk.realizedToday+status.risk.floatingPnl)>=0?"positive":"negative"}>{money(status.risk.realizedToday+status.risk.floatingPnl,currency)}</strong><p>Realized + floating</p></article></section>
-    <section className="card section" style={{padding:20}}><div className="head"><div><div className="eyebrow">ORDER TICKET</div><h2>Submit a protected market order</h2></div><span className="badge">{status.liveTradingConfigured&&status.terminalTradingAllowed?"LIVE ROUTING ENABLED":"EXECUTION DISABLED"}</span></div>
-      <div className="grid four"><label className="field">MT5 symbol<input value={symbol} onChange={e=>setSymbol(e.target.value)} placeholder="e.g. XAUUSDm"/></label><label className="field">Direction<select value={side} onChange={e=>setSide(e.target.value as "BUY"|"SELL")}><option>BUY</option><option>SELL</option></select></label><label className="field">Volume (lots)<input type="number" min="0.01" step="0.01" max={status.risk.maxOrderVolume} value={volume} onChange={e=>setVolume(e.target.value)}/></label><div className="field"><span>Safety caps</span><strong>{status.risk.maxOrderVolume} lots · {status.risk.maxOpenPositions} positions</strong></div></div>
-      <div className="grid two"><label className="field">Stop loss (required)<input type="number" step="any" value={sl} onChange={e=>setSl(e.target.value)} placeholder="Price level"/></label><label className="field">Take profit (required)<input type="number" step="any" value={tp} onChange={e=>setTp(e.target.value)} placeholder="Price level"/></label></div>
-      <div className="card" style={{padding:14,marginTop:16,borderColor:"#e9c779",background:"#fffaf0"}}><p><ShieldAlert size={16}/> <b>Real-money warning:</b> the order goes to the connected MT5 account. Check symbol, lot size and protective levels before continuing. Broker execution, slippage and losses are possible.</p><p className={status.risk.dailyLossLimitReached?"negative":"sub"}>Daily-loss guard: {money(status.risk.maxDailyLoss,currency)} · today {money(status.risk.realizedToday+status.risk.floatingPnl,currency)} {status.risk.dailyLossLimitReached?"— limit reached, new orders blocked":""}</p></div>
-      <button className="button" style={{marginTop:16}} onClick={sendTrade} disabled={busy||!status.liveTradingConfigured||!status.terminalTradingAllowed||status.risk.dailyLossLimitReached||status.positions.length>=status.risk.maxOpenPositions||!symbol||!sl||!tp||Number(volume)<=0}>{side==="BUY"?<ArrowUpFromLine size={16}/>:<ArrowDownToLine size={16}/>} Submit REAL {side} order</button>
-      <p className="sub">Live routing additionally requires server-side enablement, MT5 Algo Trading, token authentication and a separate confirmation dialog for every order.</p>
-    </section>
-    <section className="card section" style={{padding:20}}><div className="head"><div><div className="eyebrow">CONNECTED ACCOUNT</div><h2>Open positions ({status.positions.length})</h2></div></div>{status.positions.length===0?<p className="sub">No open positions.</p>:<div style={{overflowX:"auto"}}><table style={{width:"100%",textAlign:"left",borderCollapse:"collapse"}}><thead><tr>{["Ticket","Instrument","Side","Lots","Open → current","SL / TP","P/L",""].map(h=><th key={h} style={{padding:10,borderBottom:"1px solid var(--line)"}}>{h}</th>)}</tr></thead><tbody>{status.positions.map(p=><tr key={p.ticket}><td>{p.ticket}</td><td>{p.symbol}</td><td>{p.type}</td><td>{p.volume}</td><td>{p.priceOpen} → {p.priceCurrent}</td><td>{p.stopLoss} / {p.takeProfit}</td><td className={p.profit>=0?"positive":"negative"}>{money(p.profit+p.swap,currency)}</td><td><button className="button" disabled={busy} onClick={()=>void close(p.ticket)}>Close</button></td></tr>)}</tbody></table></div>}</section>
-    <p className="sub section"><AlertTriangle size={15}/> Independent trading console; analysis signals do not place orders or guarantee outcomes. Test on a demo account first.</p></>}
-    {!status&&!error&&<section className="card section" style={{padding:20}}><Activity/> Enter the local bridge token to load account status. Start the bridge and connect MT5 first.</section>}
-  </main>;
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [connection, instruments] = await Promise.all([getMt5Health(), getMt5Symbols()]);
+      setHealth(connection);
+      setSymbols(instruments);
+    } catch (err) {
+      setHealth(null);
+      setSymbols([]);
+      setError(err instanceof Error ? err.message : "Unable to connect to MT5.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return symbols;
+    return symbols.filter((item) =>
+      item.symbol.toLowerCase().includes(needle) ||
+      item.displayName.toLowerCase().includes(needle) ||
+      item.path.toLowerCase().includes(needle)
+    );
+  }, [query, symbols]);
+
+  return (
+    <main className="wrap" style={{ maxWidth: 1120, paddingTop: 32 }}>
+      <header className="head" style={{ marginBottom: 24 }}>
+        <div>
+          <div className="eyebrow">LOCAL METATRADER 5 TERMINAL</div>
+          <h1>Broker connection</h1>
+          <p className="sub">Read-only connection to the broker account already logged into MT5.</p>
+        </div>
+        <a className="badge" href="/">Back to market data</a>
+      </header>
+
+      <section className="card" style={{ padding: 20, marginBottom: 16 }}>
+        <div className="head">
+          <div>
+            <div className="eyebrow">CONNECTION STATUS</div>
+            <h2>{health?.connected ? "MT5 connected" : "MT5 not connected"}</h2>
+          </div>
+          <button className="button" onClick={() => void refresh()} disabled={loading}>
+            <RefreshCw size={15} /> Refresh
+          </button>
+        </div>
+        {error && <p role="alert" className="negative">{error}</p>}
+        {loading && <p className="sub">Checking the local terminal…</p>}
+        {health?.connected && (
+          <div className="grid three">
+            <div className="indicator"><span>BROKER / COMPANY</span><b>{health.company || health.broker || "MT5 broker"}</b></div>
+            <div className="indicator"><span>TRADE SERVER</span><b>{health.server || "Not reported"}</b></div>
+            <div className="indicator"><span>TERMINAL</span><b>{health.terminal || "MetaTrader 5"}</b></div>
+          </div>
+        )}
+        <p className="sub mt-3">This screen only reads connection information and market symbols. It cannot send, modify or close orders.</p>
+      </section>
+
+      <section className="card" style={{ padding: 20 }}>
+        <div className="head">
+          <div>
+            <div className="eyebrow">MARKET WATCH DISCOVERY</div>
+            <h2>Available instruments ({filtered.length})</h2>
+          </div>
+          <Activity size={18} />
+        </div>
+        <label className="field">
+          <Search size={16} />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter symbols or instrument names" />
+        </label>
+        <div style={{ overflowX: "auto", marginTop: 16 }}>
+          <table style={{ width: "100%", textAlign: "left", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>{["Symbol", "Description", "Bid", "Ask", "Spread"].map((heading) => (
+                <th key={heading} style={{ padding: 10, borderBottom: "1px solid var(--line)" }}>{heading}</th>
+              ))}</tr>
+            </thead>
+            <tbody>
+              {filtered.slice(0, 300).map((item) => (
+                <tr key={item.symbol}>
+                  <td style={{ padding: 10 }}>{item.symbol}</td>
+                  <td style={{ padding: 10 }}>{item.displayName}</td>
+                  <td style={{ padding: 10 }}>{item.bid || "—"}</td>
+                  <td style={{ padding: 10 }}>{item.ask || "—"}</td>
+                  <td style={{ padding: 10 }}>{item.spread || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!loading && filtered.length === 0 && <p className="sub mt-3">No matching instruments. Check the symbol name in MT5 Market Watch.</p>}
+        </div>
+      </section>
+    </main>
+  );
 }
