@@ -1,21 +1,25 @@
-# AI Market Analyzer PRO
+# AI Market Analyzer
 
-Quantitative market-research workspace with local Exness MT5 market data and an optional, explicitly enabled live-trading console.
+A market-data viewer that reads prices and historical candles from a locally running MetaTrader 5 desktop terminal.
 
-## Run locally
+## Run the web app
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local Next.js URL (normally `http://localhost:3000`). The app uses locally generated/demo data where a provider is not configured; do not treat demo values as live quotes.
+## Start the MT5 data bridge
 
-## Exness MT5 live console
+The broker-neutral, read-only bridge is in [mt5-bridge/](mt5-bridge/README.md). It uses whichever broker account is already logged into the local MT5 terminal.
 
-The optional bridge at `mt5-bridge/` connects to a MetaTrader 5 terminal on the user's Windows machine. Read its setup and safety notes in [mt5-bridge/README.md](mt5-bridge/README.md). Live order routing is off by default and requires local environment flags, a private bearer token, MT5 Algo Trading, protective stop/target levels, and confirmation for each real order. The console is at `/trading/`.
+```powershell
+cd mt5-bridge
+py -m pip install -r requirements.txt
+py bridge.py
+```
 
-Start with an MT5 demo account and conservative server-side limits. Never expose the local bridge to the public internet or commit credentials. Live trading risks loss; safeguards cannot guarantee an execution price or maximum loss.
+Then open the web app at `http://localhost:3000`. The bridge listens on `127.0.0.1:8765` and exposes market-data endpoints only.
 
 ## Build
 
@@ -23,4 +27,8 @@ Start with an MT5 demo account and conservative server-side limits. Never expose
 npm run build
 ```
 
-The frontend is configured for static export into `apps/web/out`. Local bridge trading requires the browser UI and MT5 bridge to run on the same machine; browsers may block local HTTP requests from an HTTPS-hosted site.
+The frontend is configured for static export into `apps/web/out`.
+
+## Safety
+
+This project provides read-only market data. It does not place, modify, or close orders, and it does not store broker login credentials. Do not expose the local bridge to the public internet.
