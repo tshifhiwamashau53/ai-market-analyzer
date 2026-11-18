@@ -1,41 +1,46 @@
-# Exness MT5 Local Trading Bridge
+# MetaTrader 5 Read-Only Bridge
 
-This bridge connects to the MetaTrader 5 terminal running on your own Windows computer. Market data endpoints are read-only; separate authenticated routes provide account status, protected market orders, and closing an open position. Trading is **disabled by default**.
+This bridge reads market data from the MetaTrader 5 desktop terminal running on your Windows computer. It is broker-neutral: it uses the account and trade server already connected in MT5, whether that account is with Exness or another MT5-supported broker.
 
-## Requirements and setup
+The bridge is deliberately **read-only**. It has no order-placement, order-modification, position-closing, or account-management endpoints.
 
-- Windows, Python 3.10+, installed and logged into the intended Exness MT5 account.
-- Keep this bridge local. It binds only to `127.0.0.1`; do not port-forward it, put it on a public server, or commit secrets.
+## Requirements
+
+- Windows computer
+- MetaTrader 5 desktop terminal installed and logged in to your broker
+- Python 3.10 or newer
+
+## Install and start
+
+Open PowerShell in the `mt5-bridge` folder:
 
 ```powershell
 py -m pip install -r requirements.txt
-$env:MT5_BRIDGE_TOKEN = "$(py -c \"import secrets; print(secrets.token_urlsafe(32))\")"
 py bridge.py
 ```
 
-Open `http://localhost:3000/trading/` in the same computer's web browser. Paste the token into the console. It is held for the current browser session only. HTTPS-hosted websites generally cannot call a local HTTP bridge because of browser mixed-content restrictions; use the local development UI or a properly secured local HTTPS setup.
+The bridge listens only on `http://127.0.0.1:8765`. Keep it on your own computer. Do not port-forward the port or expose it to the public internet.
 
-## Enablement and safety caps
+Open the app at `http://localhost:3000`. The app reads the active terminal's broker/server details and available symbols. The terminal must already be logged in.
 
-First use the MT5 demo account. To enable the bridge's live-order endpoints, configure these process environment variables and restart it:
+## Supported read-only endpoints
 
-```powershell
-$env:MT5_ENABLE_LIVE_TRADING = "YES"
-$env:MT5_MAX_ORDER_VOLUME = "0.01"
-$env:MT5_MAX_OPEN_POSITIONS = "1"
-$env:MT5_MAX_DAILY_LOSS = "10"
-$env:MT5_ALLOWED_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
-py bridge.py
-```
+- `GET /health` — terminal connection and broker/server metadata
+- `GET /symbols` — symbols available from the connected terminal
+- `GET /resolve?asset=XAUUSD` — find a matching broker symbol
+- `GET /quote?symbol=XAUUSD.a` — current bid/ask quote
+- `GET /candles?symbol=XAUUSD.a&interval=5m&limit=200` — historical candles
 
-Set limits appropriate to your account and currency. `MT5_MAX_DAILY_LOSS` uses the account's deposit currency and blocks new entries once today's realized plus open floating P/L reaches the configured loss. The bridge also enforces MT5 symbol lot minimum/maximum/step, requires a stop-loss and take-profit on entry, checks orders with the broker before submission, and limits concurrent open positions. This is a best-effort local guard, not a guarantee against gaps, slippage, terminal/network failure, or losses; it cannot guarantee a daily loss ceiling.
+Supported intervals: `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, and `1d`.
 
-Live orders require all of: a local bearer token, explicit server enablement, MT5 terminal Algo Trading enabled, a fresh per-order confirmation in the UI and matching confirmation on the request. Each order is sent directly to the connected account. Closing a position submits a real opposite market order. There is no unattended signal execution or auto-trading loop.
+## Broker symbol names
 
-## Endpoints
+Brokers may use different suffixes or prefixes, for example `XAUUSD`, `XAUUSD.a`, or `XAUUSDm`. Use the exact symbol shown in the MT5 Market Watch list for the most reliable result. The resolver tries an exact match first and then a prefix/partial match.
 
-Read-only: `/health`, `/symbols`, `/resolve?asset=XAUUSD`, `/quote?symbol=XAUUSDm`, `/candles?asset=XAUUSD&interval=5m&limit=200`.
+## Security and limitations
 
-Bearer-token protected: `GET /trading/status`, `POST /trading/order`, `POST /trading/close`. The web UI provides the required confirmation, protective levels and position controls. Never paste the token into a public/shared browser, expose the bridge beyond localhost, or store broker passwords/API keys in the repository.
-
-Use your broker's supported account and review local/regulatory requirements before trading. This software is provided as-is, not financial advice or a guarantee of correct execution.
+- The bridge binds to localhost only.
+- CORS is limited to the local development app origins by default.
+- No broker password or account credentials are stored by this project.
+- Market data availability depends on the connected broker, terminal permissions, symbol visibility, and downloaded history.
+- This bridge does not place or modify trades.
