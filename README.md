@@ -1,25 +1,6 @@
 # AI Market Analyzer PRO
 
-Frontend-first quantitative market research application.
-
-## Current build
-
-The repository contains a Next.js + TypeScript frontend with:
-
-- Responsive FinTech dashboard
-- Asset search and switching
-- XAUUSD, BTCUSD, EURUSD and US30 local datasets
-- Lightweight Charts candlestick visualization
-- Predicted trajectory visualization
-- EMA, RSI, MACD, Bollinger Bands, ATR and VWAP
-- Market structure and candle-reading panels
-- Entry, stop-loss and take-profit reference levels
-- Multi-timeframe bias interface
-- Sentiment/NLP interface ready for future backend integration
-- Local backtesting and risk metrics
-- Read-only architecture with execution disabled
-
-The current market data is deterministic local demo data. It is not live market data and the forecast display is a UI/testing component, not a claim of predictive accuracy.
+Quantitative market-research workspace with local Exness MT5 market data and an optional, explicitly enabled live-trading console.
 
 ## Run locally
 
@@ -28,29 +9,18 @@ npm install
 npm run dev
 ```
 
-Then open the local URL shown by Next.js.
+Open the local Next.js URL (normally `http://localhost:3000`). The app uses locally generated/demo data where a provider is not configured; do not treat demo values as live quotes.
 
-To verify a production build:
+## Exness MT5 live console
+
+The optional bridge at `mt5-bridge/` connects to a MetaTrader 5 terminal on the user's Windows machine. Read its setup and safety notes in [mt5-bridge/README.md](mt5-bridge/README.md). Live order routing is off by default and requires local environment flags, a private bearer token, MT5 Algo Trading, protective stop/target levels, and confirmation for each real order. The console is at `/trading/`.
+
+Start with an MT5 demo account and conservative server-side limits. Never expose the local bridge to the public internet or commit credentials. Live trading risks loss; safeguards cannot guarantee an execution price or maximum loss.
+
+## Build
 
 ```bash
 npm run build
 ```
 
-Because the frontend is configured for static export, the generated site is written to `apps/web/out`.
-
-## Architecture
-
-```
-apps/web/
-  src/app/          Next.js App Router
-  src/components/   Dashboard and chart UI
-  src/lib/          Local data, indicators and backtesting
-  src/types/        Shared frontend contracts
-
-services/api/       Reserved for future FastAPI service
-packages/shared-types/ Reserved for future API contracts
-```
-
-The backend is intentionally not connected yet. FastAPI, PostgreSQL, Redis, live market providers, news sentiment and ML inference can be attached later without rebuilding the dashboard.
-
-Never put private API keys in browser-side code.
+The frontend is configured for static export into `apps/web/out`. Local bridge trading requires the browser UI and MT5 bridge to run on the same machine; browsers may block local HTTP requests from an HTTPS-hosted site.
