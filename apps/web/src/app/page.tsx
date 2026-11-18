@@ -1,29 +1,145 @@
 "use client";
-import {useEffect,useState} from "react";
-import {Activity,RefreshCw,Search,ShieldCheck,BrainCircuit,BarChart3} from "lucide-react";
+
+import { useCallback, useEffect, useState } from "react";
+import { Activity, RefreshCw, Search } from "lucide-react";
 import MarketChart from "@/components/MarketChart";
-import {analyzeMarket,advancedMarket,backtestMarket,marketHistory,Analysis,MarketHistory,AdvancedAnalysis} from "@/lib/api";
+import { marketHistory, type MarketHistory } from "@/lib/api";
 
-const fmt=(n:number|null|undefined)=>n==null?"—":n>=100?n.toLocaleString(undefined,{maximumFractionDigits:2}):n.toFixed(5);
+const formatPrice = (value: number) =>
+  value.toLocaleString(undefined, { maximumFractionDigits: 6 });
 
-export default function Home(){
- const [symbol,setSymbol]=useState("XAUUSD"),[query,setQuery]=useState(""),[tf,setTf]=useState("1d"),[analysis,setAnalysis]=useState<Analysis|null>(null),[advanced,setAdvanced]=useState<AdvancedAnalysis|null>(null),[history,setHistory]=useState<MarketHistory|null>(null),[bt,setBt]=useState<any>(null),[loading,setLoading]=useState(true),[error,setError]=useState("");
- const load=async()=>{setLoading(true);setError("");try{const [h,a,adv]=await Promise.all([marketHistory(symbol,"6mo",tf),analyzeMarket(symbol,"6mo",tf),advancedMarket(symbol,tf==="5m"||tf==="15m"?tf:"15m")]);setHistory(h);setAnalysis(a);setAdvanced(adv)}catch(e){setError(e instanceof Error?e.message:"API request failed")}finally{setLoading(false)}};
- useEffect(()=>{load()},[symbol,tf]);
- const runBT=async()=>{try{setBt(await backtestMarket(symbol))}catch(e){setError(e instanceof Error?e.message:"Backtest failed")}};
- const tone=analysis?.direction==="BULLISH"?"positive":analysis?.direction==="BEARISH"?"negative":"neutral";
- const rr=analysis?.entry&&analysis?.stop_loss&&analysis?.take_profit?Math.abs(analysis.take_profit-analysis.entry)/Math.max(1e-9,Math.abs(analysis.entry-analysis.stop_loss)):null;
- return <div><header className="topbar"><div className="brand"><span className="brandmark"><Activity size={20}/></span>AI Market Analyzer <span className="mono text-[9px] text-[var(--green)]">PRO</span></div><div className="status"><i className="dot"/>REAL DATA ENGINE</div></header>
- <main className="wrap"><section className="hero"><div><div className="eyebrow">QUANTITATIVE MARKET INTELLIGENCE</div><h1>Analyze markets.<br/><span>Test the thesis.</span></h1><p className="sub">Real market-data pipeline with technical analysis, multi-timeframe structure, volume-profile strategy, statistical forecasting and historical validation. No synthetic prices are presented as live data.</p></div></section>
- <div className="toolbar"><div className="field"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Ticker e.g. XAUUSD"/><button onClick={()=>{if(query.trim())setSymbol(query.trim().toUpperCase());setQuery("")}}>ANALYZE</button></div><select className="select" value={tf} onChange={e=>setTf(e.target.value)}><option value="1d">1D</option><option value="1h">1H</option><option value="15m">15M</option><option value="5m">5M</option></select><button className="button" onClick={load}><RefreshCw size={14}/>REFRESH</button><button className="button" onClick={runBT}>BACKTEST</button></div>
- {error&&<div className="card mt-4 p-4 text-[var(--negative)]">{error}</div>}
- {loading&&!analysis?<div className="card mt-4 p-8">Loading real market data…</div>:analysis&&history?<><section className="grid kpis mt-4"><div className="card kpi"><div className="eyebrow">MARKET STATE</div><strong className={tone}>{analysis.direction}</strong><p>{analysis.setup}</p></div><div className="card kpi"><div className="eyebrow">CURRENT PRICE</div><strong>{fmt(analysis.current_price)}</strong><p>{history.source}</p></div><div className="card kpi"><div className="eyebrow">ANALYTICAL CONFIDENCE</div><strong>{(analysis.confidence*100).toFixed(0)}%</strong><p>Evidence score, not a probability of profit</p></div><div className="card kpi"><div className="eyebrow">RSI 14</div><strong>{fmt(analysis.indicators.rsi)}</strong><p>Momentum context</p></div></section>
- <section className="grid main-grid mt-4"><article className="card chart-card"><div className="head"><div><div className="eyebrow">{symbol} · {tf}</div><h2>Live market history</h2></div><span className="badge">REAL DATA</span></div><div className="chart"><MarketChart candles={history.candles.map(c=>({...c,time:Math.floor(new Date(c.time).getTime()/1000) as any}))}/></div></article>
- <aside className="side-stack"><article className="card signal"><div className="head"><div><div className="eyebrow">SIGNAL ENGINE</div><h3>Read-only direction</h3></div><span className="badge">NO EXECUTION</span></div><div className={"signal-action "+tone}>{advanced?.action||analysis.action}</div><div className="grid level-grid"><div className="level"><span>ENTRY</span><b>{fmt(advanced?.strategy.entry??analysis.entry)}</b></div><div className="level"><span>PLANNED ENTRY</span><b>{fmt(advanced?.strategy.planned_entry)}</b></div><div className="level"><span>STOP / INVALIDATION</span><b>{fmt(advanced?.strategy.stop_loss??analysis.stop_loss)}</b></div><div className="level"><span>TP1</span><b>{fmt(advanced?.strategy.targets?.[0])}</b></div><div className="level"><span>TP2</span><b>{fmt(advanced?.strategy.targets?.[1])}</b></div><div className="level"><span>TP3</span><b>{fmt(advanced?.strategy.targets?.[2])}</b></div><div className="level"><span>R:R</span><b>{advanced?.strategy.risk_reward?advanced.strategy.risk_reward.toFixed(2):rr?rr.toFixed(2):"—"}</b></div></div><div className="eyebrow">SETUP STATUS</div><p className="sub mt-2">{advanced?.strategy.stage||analysis.setup}</p><div className="eyebrow mt-3">WAITING FOR</div><ul className="reason mt-2">{(advanced?.strategy.waiting_for?.length?advanced.strategy.waiting_for:["No additional conditions."]).map((x,i)=><li key={i}>{x}</li>)}</ul><div className="eyebrow mt-3">REASONS</div><ul className="reason mt-2">{(advanced?.strategy.reasons?.length?advanced.strategy.reasons:analysis.reasons).map((x,i)=><li key={i}>{x}</li>)}</ul></article></aside></section>
- <section className="grid two section"><article className="card"><div className="head"><div><div className="eyebrow">ADVANCED STRATEGY ENGINE</div><h3>{advanced?.strategy.stage||"WAITING"}</h3></div><span className="badge">{advanced?.action||"WAIT"}</span></div><div className="grid three"><div className="indicator"><span>HTF BIAS</span><b>{advanced?.higher_timeframe_bias||"—"}</b></div><div className="indicator"><span>STRATEGY SCORE</span><b>{advanced?advanced.strategy.score.toFixed(0)+"%":"—"}</b></div><div className="indicator"><span>DATA QUALITY</span><b>{advanced?.data_quality||"—"}</b></div></div><p className="sub mt-3">{advanced?.strategy.waiting_for.length?("WAIT — "+advanced.strategy.waiting_for.join(" · ")):advanced?.strategy.reasons.join(" ")}</p></article><article className="card"><div className="head"><div><div className="eyebrow">MULTI-TIMEFRAME</div><h3>4H → 1H → 15M → 5M</h3></div></div><div className="grid four">{advanced?.timeframes.map(x=><div className="indicator" key={x.timeframe}><span>{x.timeframe.toUpperCase()}</span><b>{x.direction}</b><small>{x.structure} · {x.momentum}</small></div>)}</div></article></section>
- <section className="grid two section"><article className="card"><div className="head"><div><div className="eyebrow">TECHNICAL CORE</div><h3>Indicators</h3></div><BarChart3 size={18}/></div><div className="grid three">{Object.entries(analysis.indicators).map(([k,v])=><div className="indicator" key={k}><span>{k.toUpperCase()}</span><b>{fmt(v as number|null)}</b></div>)}</div></article><article className="card"><div className="head"><div><div className="eyebrow">FORECAST</div><h3>Statistical scenario path</h3></div><BrainCircuit size={18}/></div><p className="sub">Baseline statistical forecasting is displayed separately from the deterministic strategy engine. It is not represented as a trained neural-network prediction.</p>{analysis.prediction.slice(0,5).map((p,i)=><div className="indicator" key={i}><span>{new Date(p.time).toLocaleDateString()}</span><b>{fmt(p.value)}</b></div>)}</article></section>
- <section className="grid two section"><article className="card"><div className="head"><div><div className="eyebrow">SENTIMENT</div><h3>Fundamental interface</h3></div><BrainCircuit size={18}/></div><p className="sub">{String(analysis.sentiment.status||"Not configured")}. News providers and FinBERT can be connected through the backend without changing the dashboard contract.</p></article><article className="card"><div className="head"><div><div className="eyebrow">RISK NOTES</div><h3>Validation</h3></div><ShieldCheck size={18}/></div><ul className="reason">{analysis.risk_notes.map((x,i)=><li key={i}>{x}</li>)}</ul></article></section>
- {bt&&<section className="card section"><div className="head"><div><div className="eyebrow">BACKTEST</div><h3>{bt.symbol} · {bt.period}</h3></div></div><div className="grid four"><div className="kpi"><span>TOTAL RETURN</span><strong>{(bt.metrics.total_return*100).toFixed(2)}%</strong></div><div className="kpi"><span>MAX DRAWDOWN</span><strong>{(bt.metrics.max_drawdown*100).toFixed(2)}%</strong></div><div className="kpi"><span>SHARPE</span><strong>{bt.metrics.sharpe.toFixed(2)}</strong></div><div className="kpi"><span>WIN RATE</span><strong>{(bt.metrics.win_rate*100).toFixed(1)}%</strong></div><div className="kpi"><span>PROFIT FACTOR</span><strong>{bt.metrics.profit_factor.toFixed(2)}</strong></div><div className="kpi"><span>EXPECTANCY</span><strong>{(bt.metrics.expectancy*100).toFixed(2)}%</strong></div><div className="kpi"><span>TRADES</span><strong>{bt.metrics.observations}</strong></div></div><p className="sub mt-3">{bt.validation_note}</p></section>}
- </>:null}
- <footer className="footer"><span>AI Market Analyzer PRO</span><span>Analysis only. The system does not place orders.</span></footer></main></div>
+export default function Home() {
+  const [symbol, setSymbol] = useState("XAUUSD");
+  const [search, setSearch] = useState("");
+  const [timeframe, setTimeframe] = useState("1h");
+  const [history, setHistory] = useState<MarketHistory | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const result = await marketHistory(symbol, "6mo", timeframe);
+      setHistory(result);
+    } catch (err) {
+      setHistory(null);
+      setError(err instanceof Error ? err.message : "Unable to load MT5 market data.");
+    } finally {
+      setLoading(false);
+    }
+  }, [symbol, timeframe]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const latest = history?.candles.at(-1);
+
+  return (
+    <div>
+      <header className="topbar">
+        <div className="brand">
+          <span className="brandmark"><Activity size={20} /></span>
+          MT5 Market Data
+        </div>
+        <div className="status"><i className="dot" /> READ-ONLY CONNECTION</div>
+      </header>
+
+      <main className="wrap">
+        <section className="hero">
+          <div>
+            <div className="eyebrow">BROKER-NEUTRAL MARKET DATA</div>
+            <h1>Explore your markets.<br /><span>Read the data.</span></h1>
+            <p className="sub">
+              Reads quotes and historical candles from the MetaTrader 5 terminal
+              currently connected on this computer. The bridge does not place or
+              modify trades.
+            </p>
+          </div>
+        </section>
+
+        <div className="toolbar">
+          <div className="field">
+            <Search size={16} />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && search.trim()) setSymbol(search.trim());
+              }}
+              placeholder="MT5 symbol, e.g. XAUUSD.a"
+            />
+            <button onClick={() => {
+              if (search.trim()) setSymbol(search.trim());
+            }}>LOAD</button>
+          </div>
+          <select className="select" value={timeframe} onChange={(event) => setTimeframe(event.target.value)}>
+            <option value="1d">1D</option>
+            <option value="4h">4H</option>
+            <option value="1h">1H</option>
+            <option value="30m">30M</option>
+            <option value="15m">15M</option>
+            <option value="5m">5M</option>
+            <option value="1m">1M</option>
+          </select>
+          <button className="button" onClick={() => void load()} disabled={loading}>
+            <RefreshCw size={14} /> REFRESH
+          </button>
+          <a className="button" href="/trading/">MT5 CONNECTION</a>
+        </div>
+
+        {error && <div className="card mt-4 p-4 text-[var(--negative)]" role="alert">{error}</div>}
+        {loading && <div className="card mt-4 p-8">Loading data from the connected MT5 terminal…</div>}
+
+        {!loading && history && latest && (
+          <>
+            <section className="grid kpis mt-4">
+              <div className="card kpi">
+                <div className="eyebrow">CONNECTED SYMBOL</div>
+                <strong>{history.symbol}</strong>
+                <p>{history.source}</p>
+              </div>
+              <div className="card kpi">
+                <div className="eyebrow">LATEST CLOSE</div>
+                <strong>{formatPrice(latest.close)}</strong>
+                <p>{new Date(latest.time).toLocaleString()}</p>
+              </div>
+              <div className="card kpi">
+                <div className="eyebrow">TIMEFRAME</div>
+                <strong>{history.interval.toUpperCase()}</strong>
+                <p>{history.candles.length} candles loaded</p>
+              </div>
+              <div className="card kpi">
+                <div className="eyebrow">DATA SOURCE</div>
+                <strong>MT5 TERMINAL</strong>
+                <p>Broker-provided feed</p>
+              </div>
+            </section>
+
+            <section className="card chart-card mt-4">
+              <div className="head">
+                <div>
+                  <div className="eyebrow">{history.symbol} · {history.interval}</div>
+                  <h2>Historical market data</h2>
+                </div>
+                <span className="badge">READ ONLY</span>
+              </div>
+              <div className="chart">
+                <MarketChart candles={history.candles.map((candle) => ({
+                  ...candle,
+                  time: Math.floor(new Date(candle.time).getTime() / 1000) as never,
+                }))} />
+              </div>
+            </section>
+          </>
+        )}
+
+        <footer className="footer">
+          <span>MT5 Market Data</span>
+          <span>Read-only. No order placement or account modification.</span>
+        </footer>
+      </main>
+    </div>
+  );
 }
